@@ -1,0 +1,153 @@
+
+<!-- The risks of persistent storage -->
+<div class="page">
+    <div class="page-header">
+        <h2>The Problem With SSDs</h2>
+        <div class="button-container">
+            <button class="prev-next-btn" onclick="prev()">Back</button>
+            <button class="prev-next-btn" onclick="next()">Next</button>
+        </div>
+    </div>
+    <p>
+        In general, solid state drives ("SSDs") are a little bit dishonest.
+        You ask them to delete data, and they say "sure!", but in reality,
+        they haven't deleted your data.
+    </p>
+    <p>
+        The use of deletion utilities like <code>shred</code> assists with
+        this problem, but does not fix it, except on expensive
+        enterprise-grade SSDs that meticulously follow TRIM instructions.
+        This makes responsible handling and stewardship of data a lot more
+        tricky for the consumer.
+    </p>
+    <p>
+        Luckily, there's a solution: bypass SSD, and use a hard disk ("HD")
+        to store your data.
+    </p>
+</div>
+
+<!-- Reroute Home Directory To HD -->
+<div class="page">
+    <div class="page-header">
+        <h2>Reroute Home Directory To HD: Part 1.</h2>
+        <div class="button-container">
+            <button class="prev-next-btn" onclick="prev()">Back</button>
+            <button class="prev-next-btn" onclick="next()">Next</button>
+        </div>
+    </div>
+    <p>
+        A simple solution is to instead use a hard disk ("HD") to store
+        your data.
+    </p>
+    <p>
+        If you don't have a physical hard disk attached, you can skip this
+        step. But beware that doing so means that every file you save will
+        potentially persist for a very long time.
+    </p>
+</div>
+
+<!-- Use In-Memory Compression and Encryption -->
+<div class="page">
+    <div class="page-header">
+        <h2>Use In-Memory Compression To Reduce Swap</h2>
+        <div class="button-container">
+            <button class="prev-next-btn" onclick="prev()">Back</button>
+            <button class="prev-next-btn" onclick="next()">Next</button>
+        </div>
+    </div>
+    <p>
+        In general, solid state drives ("SSDs") are a little bit dishonest.
+        You ask them to delete data, and they say "sure!", but in reality,
+        they haven't deleted your data. This makes responsible handling
+        and stewardship of data a lot more tricky.
+    </p>
+    <div class="bash-script-box">
+        <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+    </div>
+</div>
+
+Idea 1. Suggest zram + cryptsetup for in-memory encryption.
+
+    # Install dependencies
+    echo "Installing dependencies..."
+    until sudo apt install -y cryptsetup zram-tools; sleep 1; done
+
+    # Get the total available memory (in KB) from `free` command
+    total_mem_kb=$(free -k | awk '/Mem:/ {print $2}')
+
+    # Calculate half of the total memory (in KB)
+    half_mem_kb=$((total_mem_kb / 2))
+
+    # Convert half memory to MB for zram configuration (rounded down)
+    half_mem_mb=$((half_mem_kb / 1024))
+
+    # Log the memory allocation
+    echo "Total physical memory: $((total_mem_kb / 1024)) MB"
+    echo "Allocating half of it ($half_mem_mb MB) to zram"
+
+    # Load the zram module (if not already loaded)
+    echo "Loading zram module..."
+    until sudo modprobe zram; sleep 1; done
+
+    # Set the zram disk size to half of the physical memory
+    echo "Setting zram disk size..."
+    echo "${half_mem_mb}M" | sudo tee /sys/block/zram0/disksize
+
+    # Encrypt the zram device with cryptsetup (LUKS encryption)
+    echo "Encrypting /dev/zram0..."
+    until sudo cryptsetup luksFormat /dev/zram0; sleep 1; done
+
+    # Open the encrypted zram device
+    echo "Opening encrypted zram device..."
+    until sudo cryptsetup luksOpen /dev/zram0 zram_crypt; sleep 1; done
+
+    # Create a filesystem (e.g., ext4) on the encrypted zram device
+    echo "Creating filesystem on encrypted zram device..."
+    until sudo mkfs.ext4 /dev/mapper/zram_crypt; sleep 1; done
+
+    # Mount the encrypted zram device to a mount point (optional, e.g., /mnt)
+    echo "Mounting the encrypted zram device to /mnt..."
+    until sudo mount /dev/mapper/zram_crypt /mnt; sleep 1; done
+
+    # Log the success message
+    echo "Zram device encrypted and mounted successfully at /mnt"
+
+    # Add the mount to /etc/fstab to make it persistent across reboots
+    echo "Adding mount to /etc/fstab..."
+    until echo "/dev/mapper/zram_crypt /mnt ext4 defaults 0 2" | sudo tee -a /etc/fstab; sleep 1; done
+
+    echo "Setup complete."
+
+Idea 2. Suggest dom0 to configure user data so that it lives on a HD.
+
+    #!/bin/bash
+
+    # Define the location of your HD volume (e.g., '/dev/sdb1')
+    HDD_VOLUME="/dev/sdb1"
+    MOUNT_POINT="/home"
+
+    # Iterate over all AppVMs
+    for appvm in $(qvm-ls --template=false --name-only); do
+        # Check if the AppVM already has a persistent storage volume attached
+        if ! qvm-volume list $appvm | grep -q 'appvm-persistent-storage'; then
+            echo "Attaching persistent storage to $appvm..."
+            # Attach the persistent volume
+            qvm-volume attach $appvm --volume appvm-persistent-storage
+        fi
+        
+        # Mount the persistent volume in the appropriate directory
+        qvm-run --no-verify $appvm "sudo mount $HDD_VOLUME $MOUNT_POINT"
+
+        # Add the mount to /etc/fstab in the AppVM to persist across reboots
+        qvm-run --no-verify $appvm "echo '$HDD_VOLUME $MOUNT_POINT ext4 defaults 0 2' | sudo tee -a /etc/fstab"
+    done
+
+Idea 3.
+
+    Lock the browser so that if it tries to modify anything but its internal cache files, we kill it.
+    Maybe use app armor or even a cron script.
+
+Idea 4.
+
+    Firmware updated over TOR (since it contains binary blobs).
+    Send "mark as read-only" instructions (e.g. to vBIOS) at boot time.

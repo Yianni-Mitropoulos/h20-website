@@ -1,0 +1,448 @@
+    <div class="page">
+        <div class="page-header">
+            <h2>General Offline Use</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            We'll now set up our <code>dXX-studio-GTK</code> and <code>dXX-studio-Qt</code>, which are designed for general offline use.
+        </p>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>General Offline Use: Part 3a (GTK).</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            Let's now install some basic GUI tools into <code>dXX-studio-GTK</code>.
+        </p>
+        <p>
+            The following code opens a terminal with appropriate permissions.
+        </p>
+        <div class="bash-script-box">
+            <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# ==================== # You can use SHIFT+INSERT to paste into
+#     dom0 > xterm     # xterm, or use the middle mouse button.
+# ==================== #
+
+# Open a terminal as the root user
+qvm-run -u root dXX-studio-GTK xterm
+</pre>
+        </div>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>General Offline Use: Part 3b (GTK)</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            The following script installs GTK-only software. All apps listed here are free and open-source, and are chosen with attention to the independence and reputability of their stewards and developers.
+        </p>
+        <div class="bash-script-box">
+            <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# =============================== # You can use SHIFT+INSERT to paste into
+#     dXX-studio-GTK > xterm     # xterm, or use the middle mouse button.
+# =============================== #
+
+# Update package list
+until sudo apt update; do sleep 1; done
+
+# Minimal File Manager
+until sudo apt install --no-install-recommends thunar; do sleep 1; done
+until sudo apt install qubes-core-agent-thunar; do sleep 1; done
+
+# Minimal Archive Manager
+# NOTE: You need to install support for proprietary formats manually
+until sudo apt install --no-install-recommends xarchiver; do sleep 1; done
+until sudo apt install --no-install-recommends thunar-archive-plugin; do sleep 1; done
+
+# Basic Text Editor
+until sudo apt install --no-install-recommends mousepad; do sleep 1; done
+
+# PDF Tools
+until sudo apt install --no-install-recommends evince pdfarranger poppler-data; do sleep 1; done
+
+# Images &amp; Graphics (installs GIMP but not Ghostscript)
+until sudo apt install --no-install-recommends ristretto gimp; do sleep 1; done
+
+# Audio/Video
+#
+# We use Parole, which relies on GStreamer.
+#
+# This is a nice option compared with ffmpeg because:
+# (a) GStreamer's maintainers have better jurisdictional protection.
+# (b) GStreamer is more modular (untrusted binaries can be brought in as needed).
+# (c) GStreamer is a lower value target due to being less widespread in its use.
+# (d) Added nicety: Thunar File Manager's media plugin uses GStreamer.
+#
+# NOTE: This setup WON'T play .mp4, .avi, or .mov videos out of the box.
+# It **will** play WebM, despite the connection to Google and Microsoft, etc.
+# For a variety of reasons, this probably doesn't pose a significant risk of
+# supply chain compromise, as long as the codec is sourced from a reputable
+# mirror. But DYOR if in doubt.
+#
+# To enable extra formats, install the necessary codecs inside a **disposable qube**:
+#
+#     sudo apt install gstreamer1.0-plugins-bad
+#     sudo apt install gstreamer1.0-plugins-ugly
+#
+# === FORMATS SUPPORTED BY DEFAULT ===
+# - Audio: MP3, WAV, FLAC, Vorbis (.ogg), Opus, PCM, Musepack, ALAC, Monkey's Audio
+#          Note: some older MP3 files are not supported without "ugly" plugin
+# - Video: Theora (.ogv), VP8/VP9 (.webm), MJPEG, some uncompressed AVI
+# - Containers: OGG, WebM, Matroska (.mkv) [open codecs only], AVI [uncompressed/MJPEG], WAV, FLAC
+#
+# === FORMATS NEEDING "BAD" PLUGINS ===
+# - AAC audio (.m4a, in .mp4/.mkv)
+# - H.265/HEVC video (.mp4, .mkv)
+# - XVID, MPEG-4 Part 2
+# - Some legacy or rarely used formats
+#
+# === FORMATS NEEDING "UGLY" PLUGINS ===
+# - MPEG-2 video (.mpg, .mpeg, some .vob)
+# - MP3 (alternative implementation, sometimes better compatibility)
+# - H.264/AVC video (very common in .mp4, .mov, .mkv, .avi)
+#
+# === FORMATS NEEDING BOTH "BAD" + "UGLY" ===
+# - Most commercial DVD video (.vob, MPEG-2)
+# - Full support for many proprietary codecs in .mp4, .avi, .mov
+#
+# === SPECIAL CASE: gst-libav ===
+# - Installs "libav" (ffmpeg) fallback for **maximum compatibility** (but more risk)
+# - Needed for some uncommon or highly proprietary codecs/streams
+#
+# === SUMMARY FOR USERS ===
+# - By default: works for open, patent-free audio and video (OGG, WebM, basic MKV, WAV, FLAC, MP3, etc.).
+# - To play YouTube, commercial movies, most smartphone/GoPro/camera files, or almost anything from the internet,
+#   you'll often need to install "bad" and "ugly" plugins. Do this **inside a disposable VM only** for maximum safety.
+#
+# **TIP:** Not sure what codec a file uses? Run "mediainfo yourfile.mp4" (install mediainfo first).
+until sudo apt install --no-install-recommends parole; do sleep 1; done 
+until sudo apt install --no-install-recommends thunar-media-tags-plugin; do sleep 1; done
+</pre>
+        </div>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>General Offline Use: Part 3c (GTK)</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            Now shutdown <code>dXX-studio-GTK</code>. We're going to use it as the basis for a disposable template. Note that, somewhat confusingly, disposable templates are technically AppVMs, not TemplateVMs.
+        </p>
+        <p>
+            After <code>dXX-studio-GTK</code> has successfully shutdown, use Create New Qube make an AppVM called <code>studio-GTK-dvm</code>. Settings are as follows:
+        </p>
+        <ul>
+            <li>Type: Application</li>
+            <li>Name: <code>studio-GTK-dvm</code></li>
+            <li>Label: Green (optional, but I always use Green for GTK)</li>
+            <li>Network: No network connection</li>
+            <li>Applications: Document Viewer, GNU Image Manipulation Program, Mousepad, PDF Arranger, Parole Media Player, Ristretto Image Viewer, Thunar File Manager, XTerm</li>
+        </ul>
+        <p>
+            Once you've created the AppVM, it should appear under APPS in your Q menu. Click Settings, and make the following changes.
+        </p>
+        <ul>
+            <li>Under Advanced/Other, checkmark 'Disposable template'.</li>
+            <li>Under Advanced/Other, set 'Default disposable template' to (none).</li>
+            <li>Under Applications, click 'Refresh applications'.</li>
+        </ul>
+        <p>
+            Close the dialog when you're done.
+        </p>
+        <p>
+            You should now have a functional GTK-based disposable template under Q/APPS. I recommend having a play with it. It's not very feature-rich, but this is by design. Further GTK-based software can be installed into this template, into special-purpose clones. We'll look more at how to do this in future sections.
+        </p>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>General Offline Use: Part 4a (Qt).</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            Let's now install basic GUI tools into <code>dXX-studio-Qt</code>.
+        </p>
+        <p>
+            The following code opens a terminal with appropriate permissions.
+        </p>
+        <div class="bash-script-box">
+            <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# ==================== # You can use SHIFT+INSERT to paste into
+#     dom0 > xterm     # xterm, or use the middle mouse button.
+# ==================== #
+
+# Open a terminal as the root user
+qvm-run -u root dXX-studio-Qt xterm
+</pre>
+        </div>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>General Offline Use: Part 4b (Qt)</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            The following script installs Qt-only software. All apps listed here are free and open-source, and are chosen with attention to the independence and reputability of their stewards and developers.
+        </p>
+        <div class="bash-script-box">
+            <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# ============================== # You can use SHIFT+INSERT to paste into
+#     dXX-studio-Qt > xterm     # xterm, or use the middle mouse button.
+# ============================== #
+
+# Update package list
+until sudo apt update; do sleep 1; done
+
+# Minimal File Manager
+until sudo apt install --no-install-recommends pcmanfm-qt; do sleep 1; done
+
+# Basic Text Editor
+# NOTE: This text editor is Iran-based, which might be an issue for the
+# security needs of some users. If you're critiquing Iran and/or its
+# immediate allies, consider looking for alternatives
+until sudo apt install featherpad; do sleep 1; done
+
+# PDF Tools
+until sudo apt install --no-install-recommends qpdfview poppler-data; do sleep 1; done
+
+# Images &amp; Graphics
+until sudo apt install --no-install-recommends lximage-qt lximage-qt-l10n qt5-image-formats-plugins; do sleep 1; done
+</pre>
+        </div>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>General Offline Use: Part 4c (Qt)</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            Now shutdown <code>dXX-studio-Qt</code>, and then use Create New Qube to make an AppVM called <code>studio-Qt-dvm</code>. Settings are as follows:
+        </p>
+        <ul>
+            <li>Type: Application</li>
+            <li>Name: <code>studio-Qt-dvm</code></li>
+            <li>Label: Purple (optional, but I always use Purple for Qt)</li>
+            <li>Network: No network connection</li>
+            <li>Applications: Dragon Player, Featherpad, KolourPaint, LXImage, PCManFM-Qt File Manager, qpdfview, XTerm</li>
+        </ul>
+        <p>
+            Once you've created the AppVM, it should appear under APPS in your Q menu. Click Settings, and make the following changes.
+        </p>
+        <ul>
+            <li>Under Advanced/Other, checkmark 'Disposable template'.</li>
+            <li>Under Advanced/Other, set 'Default disposable template' to (none).</li>
+            <li>Under Applications, click 'Refresh applications'.</li>
+        </ul>
+        <p>
+            Close the dialog when you're done.
+        </p>
+        <p>
+            You should now have a functional Qt-based disposable template under Q/APPS. I recommend having a play with it. It's not very feature-rich, but this is by design. Further GTK-based software can be installed into this template, into special-purpose clones. We'll look more at how to do this in future sections.
+        </p>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>General Offline Use: Part 5a (KDE).</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            Let's now install basic GUI tools into <code>dXX-studio-KDE</code>.
+        </p>
+        <p>
+            The following code opens a terminal with appropriate permissions.
+        </p>
+        <div class="bash-script-box">
+            <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# ==================== # You can use SHIFT+INSERT to paste into
+#     dom0 > xterm     # xterm, or use the middle mouse button.
+# ==================== #
+
+# Open a terminal as the root user
+qvm-run -u root dXX-studio-KDE xterm
+</pre>
+        </div>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>General Offline Use: Part 5b (KDE)</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            The following script installs KDE-only software. All apps listed here are free and open-source, and are chosen with attention to the independence and reputability of their stewards and developers.
+        </p>
+        <div class="bash-script-box">
+            <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# =============================== # You can use SHIFT+INSERT to paste into
+#     dXX-studio-KDE > xterm     # xterm, or use the middle mouse button.
+# =============================== #
+
+# Update package list
+until sudo apt update; do sleep 1; done
+
+# File Manager
+# Krusader is a twin-panel KDE file manager with rich features and strong customization.
+until sudo apt install --no-install-recommends krusader; do sleep 1; done
+
+# Text Editor
+# Kate is a KDE text editor with powerful features and no telemetry.
+until sudo apt install --no-install-recommends kate; do sleep 1; done
+
+# GStreamer Backend for Phonon
+# Both Okular and Dragon Player depend on this for video
+# We install it here to ensure the installation doesn't complain about its absence later
+until sudo apt install --no-install-recommends phonon4qt5-backend-gstreamer; do sleep 1; done
+
+# PDF Tools
+# Okular supports annotations and is suitable for offline PDF reading/editing.
+# NOTE: Limit network access; PDF rendering libraries can be complex and risky.
+until sudo apt install --no-install-recommends okular; do sleep 1; done
+
+# Images
+# Gwenview is a lightweight KDE image viewer.
+# KolourPaint is a lightweight KDE image editor.
+# Krita is a powerful FOSS digital painting tool.
+until sudo apt install --no-install-recommends gwenview; do sleep 1; done
+until sudo apt install --no-install-recommends kolourpaint breeze-icon-theme; do sleep 1; done
+until sudo apt install --no-install-recommends krita; do sleep 1; done
+
+# Audio/Video
+#
+# We use Dragon Player, which relies on GStreamer.
+#
+# This is a nice option compared with ffmpeg because:
+# (a) GStreamer's maintainers have better jurisdictional protection.
+# (b) GStreamer is more modular (untrusted binaries can be brought in as needed).
+# (c) GStreamer is a lower value target due to being less widespread in its use.
+#
+# === DEFAULT SUPPORTED FORMATS ===
+# Audio: MP3, FLAC, OGG, WAV, Opus
+# Video: WebM (VP8/VP9), MJPEG, some AVI, Theora
+#
+# === FORMATS REQUIRING ADDITIONAL PLUGINS ===
+# - AAC, H.264, H.265, MPEG-2, some MP3 variants
+# - See full notes in original explanation above
+#
+# To enable these formats, install:
+#   gstreamer1.0-plugins-bad
+#   gstreamer1.0-plugins-ugly
+# ...in a **disposable VM only**
+#
+# NOTE: Do **NOT** install gst-libav unless you explicitly want ffmpeg fallback.
+until sudo apt install --no-install-recommends dragonplayer; do sleep 1; done
+</pre>
+        </div>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>General Offline Use: Part 4c (KDE)</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            Now shutdown <code>dXX-studio-KDE</code>, and then use Create New Qube to make an AppVM called <code>studio-KDE-dvm</code>. Settings are as follows:
+        </p>
+        <ul>
+            <li>Type: Application</li>
+            <li>Name: <code>studio-KDE-dvm</code></li>
+            <li>Label: Blue (optional, but I always use Blue for KDE)</li>
+            <li>Network: No network connection</li>
+            <li>Applications: Dragon Player, Gwenview, Kate, KolourPaint, Krita, Krusader, Okular, XTerm</li>
+        </ul>
+        <p>
+            Once you've created the AppVM, it should appear under APPS in your Q menu. Click Settings, and make the following changes.
+        </p>
+        <ul>
+            <li>Under Advanced/Other, checkmark 'Disposable template'.</li>
+            <li>Under Advanced/Other, set 'Default disposable template' to (none).</li>
+            <li>Under Applications, click 'Refresh applications'.</li>
+        </ul>
+        <p>
+            Close the dialog when you're done.
+        </p>
+        <p>
+            You should now have a functional KDE-based disposable template under Q/APPS. I recommend having a play with it. It's not very feature-rich, but this is by design. Further GTK-based software can be installed into this template, into special-purpose clones. We'll look more at how to do this in future sections.
+        </p>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Security Advice For Installing New Apps</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            Theoretically you can pick and choose the software you want for these environments. However:
+        </p>
+        <ul>
+            <li>
+                We ought to keep it FOSS (free and open-source), and
+            </li>
+            <li>
+                we ought to ensure it is properly maintained for security (unless it's so small that the lack of maintenance is an acceptable risk), and
+            </li>
+            <li>
+                we ought to ensure the maintainers need to be reputable, trustworthy, and institutionally shielded, and
+            </li>
+            <li>
+                we ought to ensure that software is installed into the correct bin (GTK vs Qt vs KDE), and
+            </li>
+            <li>
+                the above considerations ought to be applied recursively to all the dependencies, and
+            </li>
+            <li>
+                sensible choices ought to to be made about non-obligatory dependencies and optional extras, with the goal of balancing usability with consideration for the above policies.
+            </li>
+        </ul>
+        <p>
+            You can also use <code>apt show APPLICATION_NAME</code> to learn more about an application's purpose, dependencies, and recommendations.
+        </p>
+        <p>
+            Be sure to use the <code>--no-install-recommends</code> flag when installing code. More explicitly, you should install software with <code>apt install --no-install-recommends PACKAGE_NAME</code>. This will prevent the application from installing unexpected software that you weren't anticipating, potentially increasing the attack surface of your build. You should also use this same flag to install any recommended libraries that you need.
+        </p>
+        <h3>Getting Help from AI</h3>
+        <p>
+            To help select new software packages for installation, here's an AI prompt you can use:
+        </p>
+        <p>
+            "I want an application for doing &amp;lt;WHATEVER&amp;gt; securely and privately. I'm using QubesOS. My domU is mostly Debian. I have two TemplateVMs for offline activities, one for GTK3+/GStreamer apps and one for Qt5+/GStreamer apps. Create a table listing the main FOSS options. Include a column for security risks, another for maintainer reputability, another for jurisdictional risks, and another for advised location (Base GTK/GStreamer Template, Clone of GTK/GStreamer Template, Base Qt/GStreamer Template, Clone of Qt/GStreamer Template, or Fresh Offline Template). Note: we're not allowed to install any ffmpeg or VLC dependencies into anything but a Fresh Offline Template. Any association with the Permanent Members of the UN Security Council (US, UK, France, China, Russia) is considered a jurisdictional risk. Any association with their closest friends and allies is also considered a jurisdictional risk. MLATs between these countries are considered especially problematic. Any association with a jurisdiction in which the authorities might force developers to backdoor or otherwise weaken the code is also considered a jurisdictional risk. Feel free to provide any further comments about the safety and minimalism of each option that you see fit. I need to know ahead of time about any privacy, security, or jurisdictional issues that might arise, so be comprehensive and generous with your explanations. Explain the subtleties and key distinctions clearly and prominently (like GTK2 vs GTK3), etc., and explain the security implications. Don't hesitate to speculate if necessary, but be clear about the fact that you're speculating. When auditing for security, don't just focus on the application itself; think carefully about the dependencies, too. All suggestions must be FOSS, and must depend as much as possible on FOSS. Please disclose any non-FOSS dependencies explicitly and prominently."
+        </p>
+        <p>
+            You can also use <code>apt show APPLICATION_NAME</code> to learn more about an application's dependencies. I recommend feeding this data back into the LLM for more information, and asking it to audit the dependencies and recommendations for security risks and jurisdictional/maintainer risks.
+        </p>
+    </div>

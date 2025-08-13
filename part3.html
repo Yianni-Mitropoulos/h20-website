@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configure a Minimal Hardened Debian Template</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="page" data-format-specifier="XX">
+        <div class="page-header">
+            <h2>Choose Debian Version</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            This guide will help you configure a hardened Debian template for QubesOS.
+        </p>
+        <p>
+            What version of Debian would you like to target? The latest is 12.
+        </p>
+        <input type="text" id="XX" placeholder="Enter your preferred version of Debian, e.g. 12">
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Download Minimal Template</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            Start by downloading <code>template-debian-XX-minimal</code>.
+            To get started, open the Q menu and type <code>dom0 xterm</code>.
+            Then type the following code into the dom0 terminal.
+            You don't have to type the comments, obviously.
+        </p>
+        <div class="bash-script-box">
+            <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# ==================== # Note that for security reasons, you
+#     dom0 > xterm     # can't paste text into dom0. You therefore
+# ==================== # have to type each command manually.
+
+# Install the minimal template if not already installed
+qubes-dom0-update qubes-template-debian-XX-minimal
+</pre>
+        </div>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Clone the Template</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            Now we'll create a clone called <code>dXX</code>. This clone will serve as the basis of most of our virtual machines. You can close your dom0 terminal after this step.
+        </p>
+        <div class="bash-script-box">
+            <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# ==================== # Note that for security reasons, you
+#     dom0 > xterm     # can't paste text into dom0. You therefore
+# ==================== # have to type each command manually.
+
+# Clone the template so we're not tinkering with the original
+qvm-clone debian-XX-minimal dXX
+
+# Launch root xterm in the template
+qvm-run -u root dXX xterm
+</pre>
+        </div>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Limit Data Retention</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            Before we get started, I recommend running the following code in <code>dXX</code>. It places limits on the retention of logs and terminal history, which promotes privacy. Users who are focused more on security than privacy may wish to skip this step.
+        </p>
+        <p>
+            <strong>Skipping this step may come back to bite you, if privacy ever becomes a concern.</strong>
+        </p>
+        <p>
+            <strong>If you decide to skip it, be sure to make a mental note that you did so.</strong>
+        </p>
+        <div class="bash-script-box">
+                <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# =================== # You can use SHIFT+INSERT to paste into
+#     dXX > xterm     # xterm, or use the middle mouse button.
+# =================== #
+
+#### 0. Ensure logs are redirected to RAM and purged on shutdown
+# Mount /var/log as a tmpfs (100MB size, ephemeral) and retry until success
+until sudo mount -t tmpfs -o size=100M,mode=0755 tmpfs /var/log; do sleep 1; done
+
+# Persist the mount in /etc/fstab (idempotent + retry-safe)
+FSTAB_LINE='tmpfs /var/log tmpfs defaults,size=100m,mode=0755 0 0'
+until grep -qF "$FSTAB_LINE" /etc/fstab || echo "$FSTAB_LINE" | sudo tee -a /etc/fstab > /dev/null; do sleep 1; done
+
+# Configure systemd-journald to use volatile (RAM-only) logging
+until sudo mkdir -p /etc/systemd/journald.conf.d; do sleep 1; done
+until echo -e '[Journal]\nStorage=volatile' | sudo tee /etc/systemd/journald.conf.d/volatile.conf > /dev/null; do sleep 1; done
+
+# Restart journald to apply the volatile logging config
+until sudo systemctl restart systemd-journald; do sleep 1; done
+
+#### 1. Limit retention of bash commands
+# Comment out HIST or shopt lines in /etc/skel/.bashrc
+file="/etc/skel/.bashrc"
+hash_char=$'\x23' # This is not obfuscation, just trying to pass shellguard test
+until awk -v h="$hash_char" -f - "$file" > "$file.new" &lt;&lt;'EOF'
+/^[[:space:]]*(HIST|shopt)/ {
+    sub(/^[[:space:]]*/, "&" h " ")
+}
+{ print }
+EOF
+do sleep 1; done
+until mv "$file.new" "$file"; do sleep 1; done
+
+# Ensure bash history is limited to 10 commands, stored in RAM, and purged on shutdown
+until sudo tee -a /etc/bash.bashrc > /dev/null &lt;&lt;'EOF'
+export HISTSIZE=10
+export HISTFILESIZE=0
+export HISTFILE=/dev/null
+EOF
+do sleep 1; done
+</pre>
+        </div>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Make Shellguard Available</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            Our script auditor from earlier works best when paired with hardened Bash settings.
+        </p>
+        <p>
+            The following code allows you to write <code>h20-shellguard</code> to harden your Bash settings against code obfuscation. It also auto-applies shellguard to code run from the <code>QubesIncoming</code> folder. When combined with <code>h20-shellaudit</code>, this provides a degree of protection against running obfuscated malicious code. But note that shellguard does NOT protect against malicious code when used alone; it MUST be used as part of a pipeline that audits for malicious behaviors.
+        </p>
+        <p>
+            After performing this step, close your terminal. Then reopen it again with root permissions from <code>dom0</code>. Advanced users can use the <code>source</code> command instead.
+        </p>
+        <div class="bash-script-box">
+                <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# =================== # You can use SHIFT+INSERT to paste into
+#     dXX > xterm     # xterm, or use the middle mouse button.
+# =================== #
+
+until sudo tee -a /etc/bash.bashrc > /dev/null &lt;&lt;'EOF'
+# h20-shellguard: Basic Bash Hardening
+# -------------------------------------
+# This function is designed to work in tandem with 'h20-auditor',
+# a separate tool that scans and normalizes shell scripts to help
+# detect obfuscation, trickery, and steganographic code.
+#
+# ShellGuard adds runtime protections that:
+# - Make unsafe patterns more likely to fail early
+# - Reduce attack surface for shell abuse
+#
+# It does NOT provide meaningful isolation or sandboxing when used alone.
+# A malicious script or user can reverse the changes.
+# It is ONLY useful in tandem with auditing tools (like ShellAudit, or otherwise).
+#
+# By default, it must be activated manually via 'h20-shellguard'.
+# It is automatically applied to all shells inside '/home/user/QubesIncoming/*'.
+# There is no associated 'disable' command. To revert, close the terminal and reopen it.
+h20-shellguard() {
+    echo "[h20-shellguard] Protections ENABLED in this shell session."
+
+    # Enforce strict glob behavior
+    shopt -s failglob  # fail if globs don't match anything
+    shopt -s nullglob  # empty globs expand to nothing
+    shopt -u extglob   # disable @(a|b) style patterns
+    shopt -u globstar  # disable **
+    shopt -u dotglob   # exclude dotfiles
+
+    # Sanitize environment
+    export IFS=$' \t\n'
+    export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    unset LD_PRELOAD
+    unset BASH_ENV
+    unset PROMPT_COMMAND
+
+    # Disable risky builtins
+    alias eval='echo [BLOCKED: eval is disabled]'
+    alias exec='echo [BLOCKED: exec is disabled]'
+    alias source='echo [BLOCKED: source is disabled]'
+    alias printf='echo [BLOCKED: use echo instead]'
+    alias command='echo [BLOCKED: command is disabled]'
+    alias builtin='echo [BLOCKED: builtin is disabled]'
+
+    # Remove malicious function overrides (if any)
+    unset -f eval exec source printf command builtin 2>/dev/null
+
+    # Hide control characters (e.g. ^C, ^D)
+    stty -echoctl 2>/dev/null || true
+    stty intr '^C' erase '^H' kill '^U' 2>/dev/null || true
+}
+
+# The following code ensures that if a shell is run from anywhere under
+# /home/user/QubesIncoming, protections are automatically applied, even
+# for non-interactive scripts.
+case "$PWD" in
+  /home/user/QubesIncoming* )
+    h20-shellguard
+    ;;
+esac
+EOF
+do sleep 1; done
+</pre> 
+        </div>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Make ShellGuard Into A Habit</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            From now on, we run <code>h20-shellguard</code> in any terminals we're planning to paste code into. That's in addition to <code>h20-shellaudit</code>. By the way, you're not allowed to copy and paste the text <code>h20-shellguard</code> from a foreign source. You have to physically type it out. Go ahead and do that now.
+        </p>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Configure Aptitude: Part 1</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            The following code should be executed in <code>dXX</code>. Its purpose is to define functions that reroute us through a random Swiss mirror (since Switzerland which has good privacy laws), and to avoid installing proprietary blobs (which represent a security risk).
+        </p>
+        <p>
+            Re-enabling proprietary blobs is straightforward, and sometimes necessary. Functions to do this are therefore also included.
+        </p>
+        <div class="bash-script-box">
+                <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# =================== # You can use SHIFT+INSERT to paste into
+#     dXX > xterm     # xterm, or use the middle mouse button.
+# =================== #
+
+#### 2. Define functions for modifying apt sources
+until sudo tee -a /etc/bash.bashrc > /dev/null &lt;&lt;'EOF_OUTER'
+# h20-register-debian-sources
+# ----------------------------
+# Creates a Debian APT sources list file at a specified path, using a random
+# Switzerland-based mirror and a given set of components (e.g. 'main', 'contrib non-free-firmware').
+# The function tests mirrors until one works by running 'apt update'.
+# Arguments:
+# $1 - Path to the file to create (e.g. /etc/apt/sources.list.d/nonfree.list)
+# $2 - Components string (e.g. "contrib non-free-firmware")
+h20-register-debian-sources() {
+    local TARGET_PATH="\$1"
+    local COMPONENTS="\$2"
+    if [ -z "\$VERSION_CODENAME" ]; then
+        echo "Getting codename for Debian version"
+        until source /etc/os-release; do sleep 1; done
+    fi
+    local CODENAME="\$VERSION_CODENAME"
+    local MIRRORS=(
+        'debian.ethz.ch'
+        'linuxsoft.cern.ch'
+        'mirror.iway.ch'
+        'mirror.metanet.ch'
+        'mirror.sinavps.ch'
+        'pkg.adfinis-on-exoscale.ch'
+    )
+    echo "Trying random Swiss mirrors to find a working one for components: \$COMPONENTS"
+    while true; do
+        local MIRROR="\${MIRRORS[\$RANDOM % \${#MIRRORS[@]}]}"
+        echo "Trying mirror: \$MIRROR"
+        until sudo tee "\$TARGET_PATH" > /dev/null &lt;&lt;EOF_INNER
+# Debian \$COMPONENTS via \$MIRROR
+deb     https://\$MIRROR/debian \$CODENAME \$COMPONENTS
+deb-src https://\$MIRROR/debian \$CODENAME \$COMPONENTS
+
+deb     https://\$MIRROR/debian-security \$CODENAME-security \$COMPONENTS
+deb-src https://\$MIRROR/debian-security \$CODENAME-security \$COMPONENTS
+EOF_INNER
+        do sleep 1; done
+        echo 'Running apt update...'
+        if sudo apt update; then
+            echo "Success with \$MIRROR"
+            break
+        else
+            echo "apt update failed with \$MIRROR - trying another mirror in 1s..."
+            sleep 1
+        fi
+    done
+    echo "APT repository file created at \$TARGET_PATH using mirror: \$MIRROR"
+    echo "Run 'sudo apt update' to refresh your APT repositories."
+}
+
+# h20-enable-nonfree-debian-sources
+# -----------------------------------
+# Enables access to Debian's contrib and non-free-firmware components
+# by creating a new APT sources list file using a Swiss mirror.
+# This is useful for systems that need non-free firmware or extra driver support.
+h20-enable-nonfree-debian-sources() {
+    h20-register-debian-sources /etc/apt/sources.list.d/nonfree.list "contrib non-free-firmware"
+}
+
+# h20-disable-nonfree-debian-sources
+# ------------------------------------
+# Disables contrib and non-free-firmware support by removing the
+# previously created sources list file. This helps enforce a fully
+# free and auditable system. Reminder: run 'sudo apt update' after disabling.
+h20-disable-nonfree-debian-sources() {
+    local TARGET_PATH="/etc/apt/sources.list.d/nonfree.list"
+    echo "Disabling contrib and non-free-firmware by removing: $TARGET_PATH"
+    if sudo rm -f "$TARGET_PATH"; then
+        echo "Removed $TARGET_PATH"
+        echo "Run 'sudo apt update' to refresh your APT sources."
+    else
+        echo "Failed to remove $TARGET_PATH"
+        return 1
+    fi
+}
+EOF_OUTER
+do sleep 1; done;
+</pre>
+        </div>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Configure Aptitude</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            Close your terminal, and reopen it again. Then run the following code. It activates the new mirrors, disabled proprietary blobs, and uses the new mirrors to update your system.
+        </p>
+        <p>
+            Reactivating propriatary blobs can be done later, on a case-by-case basis. For now, I'd argue that disabling them is the correct option.            
+        </p>
+        <div class="bash-script-box">
+                <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# =================== # You can use SHIFT+INSERT to paste into
+#     dXX > xterm     # xterm, or use the middle mouse button.
+# =================== #
+
+### 3. Modify apt sources
+# Backup only once, if not already backed up
+echo 'Backing up the original sources as /etc/apt/sources.list.bak'
+if [ ! -f /etc/apt/sources.list.bak ]; then
+    sudo cp -v /etc/apt/sources.list /etc/apt/sources.list.bak;
+fi
+
+# Make the change to the Swiss mirrors
+echo 'Changing to Swiss mirror and disabling proprietary blobs.'
+h20-register-debian-sources /etc/apt/sources.list "main"
+
+#### 4. Ensure everything is up to date via our new mirror
+echo 'Performing full upgrade via the new mirror'
+until sudo apt update; do sleep 1; done
+until sudo apt install -y apt-transport-https ca-certificates; do sleep 1; done # Ensure updates are over HTTPS
+until sudo apt full-upgrade; do sleep 1; done
+until sudo apt autoremove; do sleep 1; done
+until sudo apt clean; do sleep 1; done
+echo 'Full upgrade complete'
+</pre>
+        </div>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Configure OS</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            The following code should be executed in <code>dXX</code>. Its purpose is to reconfigure the overall operating system, with a view towards privacy and security.
+        </p>
+        <div class="bash-script-box">
+            <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# =================== # You can use SHIFT+INSERT to paste into
+#     dXX > xterm     # xterm, or use the middle mouse button.
+# =================== #
+
+echo '[INFO] --- DEBIAN HARDENING INITIATED ---'
+
+#### 5. Enable extra glibc malloc canaries/checks for any binary that is somehow not using hardened malloc
+until echo 'MALLOC_CHECK_=3' | sudo tee -a /etc/environment > /dev/null; do sleep 1; done
+until echo 'MALLOC_PERTURB_=153' | sudo tee -a /etc/environment > /dev/null; do sleep 1; done
+
+#### 6. Harden sysctl for security and anti-forensics
+echo 'Writing /etc/sysctl.d/99-hardening.conf'
+until sudo tee -a /etc/sysctl.d/99-hardening.conf > /dev/null &lt;&lt;'EOF'
+################################
+#### MEMORY/DEBUG/FORENSICS ####
+################################
+kernel.kptr_restrict = 2             # Hide kernel pointers everywhere
+kernel.dmesg_restrict = 1            # Only root can read dmesg
+kernel.yama.ptrace_scope = 3         # Completely disable ptrace except direct child
+kernel.sysrq = 0                     # No magic sysrq
+kernel.ftrace_enabled = 0            # Block kernel tracing (anti-forensics)
+kernel.perf_event_paranoid = 3       # No perf monitoring for non-root
+kernel.perf_event_mlock_kb = 1       # Minimal perf event buffer
+kernel.kexec_load_disabled = 1       # No kexec (rootkits/forensics)
+kernel.kprobes_allow_uds = 0         # No unprivileged kprobes (if supported)
+kernel.core_pattern = "|/bin/false"  # Never dump core to disk
+kernel.core_pipe_limit = 0           # No core dump pipes
+kernel.randomize_va_space = 2        # Full ASLR
+vm.mmap_min_addr = 65536             # Block low-address mmap attacks
+kernel.numa_balancing = 0            # Disable page migration/auto NUMA
+
+#######################
+#### SWAP BEHAVIOR ####
+#######################
+vm.swappiness = 10             # Do not use swap except under a lot of ram pressure
+vm.overcommit_memory = 2       # Strict overcommit restrictions (reduce DoS/fuzz)
+vm.overcommit_ratio = 400      # Gives a 400% overcommit ratio
+vm.dirty_background_ratio = 7  # Reduced from a default of 10
+vm.dirty_ratio = 15            # Reduced from a default of 20
+vm.page-cluster = 4            # 64KiB swap clusters (be sure to use ephemeral swap)
+vm.min_free_kbytes = 65536     # Extra RAM for kernel (resist memory starvation)
+
+###########################
+#### HIDE PROCESS INFO ####
+###########################
+kernel.pid_max = 4194304
+kernel.ngroups_max = 65536
+kernel.threads-max = 32768
+kernel.sched_child_runs_first = 1
+
+#######################################
+#### ANTI-SURVEILLANCE / ANTI-LEAK ####
+#######################################
+kernel.printk = 3 3 3 3      # Reduces kernel logging verbosity - good for minimizing leakage into dmesg, journald, or serial consoles
+kernel.nmi_watchdog = 0      # Disables kernel NMI watchdog - reduces noise and can prevent info leakage via debugging/traps
+kernel.acpi_video_flags = 0  # Minimal ACPI logs
+kernel.acpi_rsdp = 0         # Minimal ACPI root system desc
+kernel.domainname = ""       # Removes legacy NIS/YP domain - safe, modern systems do not need it
+# kernel.hostname = ""       # If the environment was a bare-metal setup debian, you would uncomment this. But within Qubes it creates problems, and should remain commented
+
+###########################
+#### FILESYSTEM / MISC ####
+###########################
+fs.suid_dumpable = 0         # No setuid core dumps
+fs.protected_regular = 2     # Block regular file hardening attacks
+fs.protected_symlinks = 1    # Block symlink privilege attacks
+fs.protected_hardlinks = 1   # Block hardlink privilege attacks
+fs.protected_fifos = 1       # Block FIFO tricks
+fs.protected_readdir = 1     # Block dangerous readdir tricks (newer kernels)
+fs.inode_readahead_blks = 8  # Minimal readahead
+fs.pipe-user-pages-soft = 0  # Harden pipe attacks
+
+###################################
+#### USERNAMESPACES/CONTAINERS ####
+###################################
+kernel.unprivileged_userns_clone = 0  # Block userns (most privesc)
+kernel.unprivileged_bpf_disabled = 1  # Block unprivileged BPF everywhere
+user.max_user_namespaces = 0          # No user namespaces for any process
+user.max_mnt_namespaces = 8
+user.max_pid_namespaces = 8
+user.max_net_namespaces = 8
+user.max_uts_namespaces = 8
+user.max_ipc_namespaces = 8
+user.max_cgroup_namespaces = 8
+user.max_time_namespaces = 8
+
+####################################
+#### AUDIT/LOGGING MINIMIZATION ####
+####################################
+kernel.audit_enabled = 0     # No kernel audit (if using forensics resistance)
+kernel.random.trust_cpu = 0  # Do not trust CPU for randomness
+
+######################
+#### MISC PRIVACY ####
+######################
+dev.tty0.autoclose = 1  # Autoclose on logout (no stray processes)
+dev.tty.autoclose = 1
+
+####################################
+#### MAXIMIZE MEMORY RANDOMNESS ####
+####################################
+vm.mmap_rnd_bits = 32         # Maximum mmap entropy (if arch supports)
+vm.mmap_rnd_compat_bits = 16  # Same for compat mode
+
+########################################
+#### ACCOMODATE HARDENED ALLOCATORS ####
+########################################
+vm.max_map_count = 1048576  # Multiply default value by 16x to support hardened_malloc
+
+#################################
+#### NETWORK STACK HARDENING ####
+#################################
+# IPv4
+net.ipv4.tcp_timestamps = 0
+net.ipv4.conf.all.rp_filter = 1
+net.ipv4.conf.default.rp_filter = 1
+net.ipv4.conf.all.accept_source_route = 0
+net.ipv4.conf.default.accept_source_route = 0
+net.ipv4.conf.all.accept_redirects = 0
+net.ipv4.conf.default.accept_redirects = 0
+net.ipv4.conf.all.secure_redirects = 1
+net.ipv4.conf.default.secure_redirects = 1
+net.ipv4.conf.all.send_redirects = 0
+net.ipv4.conf.default.send_redirects = 0
+net.ipv4.conf.all.log_martians = 1
+net.ipv4.conf.default.log_martians = 1
+net.ipv4.icmp_echo_ignore_broadcasts = 1
+net.ipv4.icmp_ignore_bogus_error_responses = 1
+net.ipv4.tcp_syncookies = 1
+net.ipv4.conf.all.shared_media = 0
+net.ipv4.conf.default.shared_media = 0
+net.ipv4.conf.all.proxy_arp = 0
+net.ipv4.conf.default.proxy_arp = 0
+net.ipv4.ip_forward = 0
+net.ipv4.conf.all.arp_filter = 1
+net.ipv4.conf.default.arp_filter = 1
+net.ipv4.conf.all.arp_announce = 2
+net.ipv4.conf.default.arp_announce = 2
+net.ipv4.conf.all.arp_ignore = 2
+net.ipv4.conf.default.arp_ignore = 2
+
+# IPv6
+net.ipv6.conf.all.disable_ipv6 = 1
+net.ipv6.conf.default.disable_ipv6 = 1
+net.ipv6.conf.lo.disable_ipv6 = 1
+net.ipv6.conf.all.accept_ra = 0
+net.ipv6.conf.default.accept_ra = 0
+net.ipv6.conf.all.accept_redirects = 0
+net.ipv6.conf.default.accept_redirects = 0
+net.ipv6.conf.all.accept_source_route = 0
+net.ipv6.conf.default.accept_source_route = 0
+net.ipv6.conf.all.drop_unsolicited_na = 1
+net.ipv6.conf.default.drop_unsolicited_na = 1
+net.ipv6.conf.lo.drop_unsolicited_na = 1
+
+##############################################
+#### PREVENT COMPACTION OF SENSITIVE DATA ####
+##############################################
+vm.compact_unevictable_allowed = 0
+EOF
+do sleep 1; done
+
+# Reapply .conf files
+until sysctl --system; do sleep 1; done
+echo '[INFO] --- DEBIAN HARDENING DONE ---'
+</pre>
+        </div>
+    </div>
+    <div class="page" data-format-specifier="YYYY">
+        <div class="page-header">
+            <h2>Hardened Malloc: Part 1.</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            The majority of software vulnerabilities arise from memory management errors. We therefore need a better and more secure memory allocator.
+        </p>
+        <p>
+            Without closing your dXX terminal, go ahead and open another terminal within a disposable qube. It should be called dispYYYY. Please enter the YYYY value below.
+        </p>
+        <input type="text" id="YYYY" placeholder="Enter YYYY value for disposable qube">
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Hardened Malloc: Part 2.</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            In this step, we download and build the memory allocator, and then transfer it to dXX. Feel free to close dispYYYY after performing this step.
+        </p>
+        <div class="bash-script-box">
+            <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# ======================== # You can use SHIFT+INSERT to paste into
+#     dispYYYY > xterm     # xterm, or use the middle mouse button.
+# ======================== #
+
+# Install download and build prerequisites
+until sudo apt update; do sleep 1; done
+until sudo apt install -y git build-essential cmake pkg-config; do sleep 1; done
+
+# Clone repository
+rm -rf hardened_malloc || true
+until git clone https://github.com/GrapheneOS/hardened_malloc.git; do sleep 1; done
+
+# Move into a subshell
+(
+    # Enter the hardened_malloc directory
+    until cd hardened_malloc; do sleep 1; done
+
+    # Build default
+    until make clean; do sleep 1; done
+    until make RELEASE=1; do sleep 1; done
+    until cp out/libhardened_malloc.so ../libhardened_malloc_default.so; do sleep 1; done
+
+    # Build non-clearing version
+    export CONFIG_ZERO_ON_FREE=0
+    export CONFIG_WRITE_AFTER_FREE_CHECK=0
+    until make clean; do sleep 1; done
+    until make RELEASE=1; do sleep 1; done
+    until cp out/libhardened_malloc.so ../libhardened_malloc_softened.so; do sleep 1; done
+)
+
+# Package both versions
+rm -f libhardened_malloc.tar.gz || true
+until tar -czf libhardened_malloc.tar.gz libhardened_malloc_default.so libhardened_malloc_softened.so; do sleep 1; done
+
+# Qubes copy to VM
+until sync; do sleep 1; done
+until qvm-copy libhardened_malloc.tar.gz; do sleep 1; done
+</pre>
+        </div>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Hardened Malloc: Part 3.</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            Now go back to your <code>dXX</code> terminal. If you closed it, open a dom0 terminal, and hit the up button until you find the appropriate command. If you can't find it, use the back button on this webpage to find the appropriate dom0 command.
+        </p>
+        <p>
+            Go ahead and run the following script in <code>dXX</code>. It put libhardened malloc into the appropriate directory, and sets up some functions to make activating it straightforward.
+        </p>
+        <div class="bash-script-box">
+            <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# =================== # You can use SHIFT+INSERT to paste into
+#     dXX > xterm     # xterm, or use the middle mouse button.
+# =================== #
+
+(
+    # Extract the tarball from the incoming Qubes directory
+    echo '[INFO] Extracting libhardened_malloc.tar.gz from QubesIncoming...'
+    until cd /home/user/QubesIncoming/dispYYYY; do sleep 1; done
+    until sudo tar -xzf libhardened_malloc.tar.gz; do sleep 1; done
+
+    # Set correct permissions
+    until sudo chmod 755 libhardened_malloc_default.so; do sleep 1; done
+    until sudo chmod 755 libhardened_malloc_softened.so; do sleep 1; done
+
+    # Move both .so files to /usr/lib
+    until sudo mv libhardened_malloc_default.so /usr/lib/; do sleep 1; done
+    until sudo mv libhardened_malloc_softened.so /usr/lib/; do sleep 1; done
+
+    # Clean up by removing the directory that has the tarball
+    cd ..
+    until rm -rf dispYYYY; do sleep 1; done
+)
+
+# Add allocator switching and inspection functions to /etc/bash.bashrc
+echo '[INFO] Adding allocator control functions to /etc/bash.bashrc'
+until sudo tee -a /etc/bash.bashrc > /dev/null &lt;&lt;'EOF'
+# h20-libhardened-malloc-harden
+# -----------------------------------
+# Enables the default version of libhardened_malloc system-wide
+# by adding it to /etc/ld.so.preload. This version includes
+# zero-on-free behavior for maximum memory hygiene.
+h20-libhardened-malloc-harden() {
+    sudo sed -i "\|/usr/lib/libhardened_malloc_.*\.so|d" /etc/ld.so.preload 2>/dev/null || true
+    echo "/usr/lib/libhardened_malloc_default.so" | sudo tee -a /etc/ld.so.preload > /dev/null
+    # Ensure only the correct line is present
+    sudo grep -Fxq "/usr/lib/libhardened_malloc_default.so" /etc/ld.so.preload && \
+    ! sudo grep -Fq "/usr/lib/libhardened_malloc_softened.so" /etc/ld.so.preload && return 0 || return 1
+    echo "Hardened malloc entries written to /etc/ld.so.preload."
+}
+
+# h20-libhardened-malloc-soften
+# ------------------------------------
+# Enables a softened version of libhardened_malloc system-wide
+# by adding it to /etc/ld.so.preload. This version disables
+# zero-on-free for better compatibility with some programs.
+h20-libhardened-malloc-soften() {
+    sudo sed -i "\|/usr/lib/libhardened_malloc_.*\.so|d" /etc/ld.so.preload 2>/dev/null || true
+    echo "/usr/lib/libhardened_malloc_softened.so" | sudo tee -a /etc/ld.so.preload > /dev/null
+    # Ensure only the correct line is present
+    sudo grep -Fxq "/usr/lib/libhardened_malloc_softened.so" /etc/ld.so.preload && \
+    ! sudo grep -Fq "/usr/lib/libhardened_malloc_default.so" /etc/ld.so.preload && return 0 || return 1
+    echo "Softened hardened malloc entries written to /etc/ld.so.preload."
+}
+
+# h20-libhardened-malloc-disable
+# -------------------------------
+# Disables all versions of libhardened_malloc by removing them
+# from /etc/ld.so.preload. Use this if you encounter crashes
+# in software that is not compatible with custom allocators.
+h20-libhardened-malloc-disable() {
+    echo "Disabling libhardened_malloc by filtering /etc/ld.so.preload..."
+    if [ ! -f /etc/ld.so.preload ]; then
+        echo "No preload file exists - nothing to do."
+        return 0
+    fi
+    if ! grep -qE "/usr/lib/libhardened_malloc_.*\.so" /etc/ld.so.preload; then
+        echo "No libhardened_malloc entries found in /etc/ld.so.preload"
+        return 0
+    fi
+    # Remove lines matching libhardened_malloc and overwrite the file
+    until sudo grep -vE "/usr/lib/libhardened_malloc_.*\.so" /etc/ld.so.preload | sudo tee /etc/ld.so.preload.tmp > /dev/null; do sleep 1; done
+    until sudo mv /etc/ld.so.preload.tmp /etc/ld.so.preload; do sleep 1; done
+    echo "Hardened malloc entries removed from /etc/ld.so.preload."
+}
+
+# h20-libhardened-malloc-inspect
+# ----------------------
+# Prints any lines in /etc/ld.so.preload that contain
+# the string "alloc". Use this to check which allocator
+# is currently active.
+h20-libhardened-malloc-inspect() {
+    echo "The lines in /etc/ld.so.preload matching .*alloc.* are as follows:"
+    sudo grep ".*alloc.*" /etc/ld.so.preload 2>/dev/null
+}
+EOF
+do sleep 1; done
+</pre>
+        </div>
+    </div>
+
+    <div class="page">
+        <div class="page-header">
+            <h2>Activate The Allocator</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            Close your terminal, and open it again (note that <code>source</code> won't work, since ShellGuard disabled it). You don't have to shutdown the VM, just close and reopen the terminal.
+        </p>
+        <p>
+            Now type the following into your terminal <code>dXX</code> terminal. It'll activate libhardened malloc for any future programs you run.
+        </p>
+        <p>
+            Congratulations-you just configured a hardened Debian template!
+        </p>
+        <p>
+            Let us now install some small utilities that will be helpful later.
+        </p>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Enable Easy Blacklisting</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            In the wonderful world of the Linux desktop experience, there's at least four library clusters that are very hard to get away from. I have in mind, in particular, the following clusters:
+        </p>
+        <ul>
+            <li>GTK. A toolkit creating Graphical User Interfaces.</li>
+            <li>Qt.  A toolkit creating Graphical User Interfaces.</li>
+            <li>GStreamer. A multimedia framework (used for playing audio and video, etc.).</li>
+            <li>FFmpeg.    A multimedia framework (used for playing audio and video, etc.).</li>
+        </ul>
+        <p>
+            The vast majority of applications you install will depend on one or two of the aforementioned clusters. Unfortunately, since these libraries are very full-featured, they represent enormous attack surfaces, and have a long history of exploitable vulnerabilities. It's therefore quite handy to be able blacklist and un-blacklist these clusters.
+        </p>
+        <p>
+            The following script installs functions we can use later to do exactly that. It doesn't actually perform the blacklisting; rather, it provides the commands that will allow us to quickly and easily do so later.
+        </p>
+        <div class="bash-script-box">
+            <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# =================== # You can use SHIFT+INSERT to paste into
+#     dXX > xterm     # xterm, or use the middle mouse button.
+# =================== #
+
+sudo tee -a /etc/bash.bashrc > /dev/null &lt;&lt;'OUTER_EOF'
+# h20-blacklist-gtk
+# ------------------
+# Blacklists the GTK Toolkit in apt.
+h20-blacklist-gtk() {
+    sudo tee /etc/apt/preferences.d/h20-blacklist-gtk > /dev/null &lt;&lt;'INNER_EOF'
+Package: libgtk*
+Pin: release *
+Pin-Priority: -1
+
+Package: gtk*
+Pin: release *
+Pin-Priority: -1
+
+Package: libgail*
+Pin: release *
+Pin-Priority: -1
+
+Package: gail*
+Pin: release *
+Pin-Priority: -1
+
+Package: gtk-update-icon-cache
+Pin: release *
+Pin-Priority: -1
+INNER_EOF
+    echo "Blacklisted all GTK (except gdk and existing core stack)."
+}
+
+# h20-blacklist-qt
+# ------------------
+# Blacklists the Qt Toolkit in apt.
+h20-blacklist-qt() {
+    sudo tee /etc/apt/preferences.d/h20-blacklist-qt > /dev/null &lt;&lt;'INNER_EOF'
+Package: libqt*
+Pin: release *
+Pin-Priority: -1
+
+Package: qt5-*
+Pin: release *
+Pin-Priority: -1
+
+Package: qt6-*
+Pin: release *
+Pin-Priority: -1
+
+Package: qtbase*
+Pin: release *
+Pin-Priority: -1
+
+Package: qttools*
+Pin: release *
+Pin-Priority: -1
+
+Package: qtwayland*
+Pin: release *
+Pin-Priority: -1
+
+Package: qtchooser
+Pin: release *
+Pin-Priority: -1
+INNER_EOF
+    echo "Blacklisted all Qt-related packages."
+}
+
+# h20-blacklist-ffmpeg
+# ---------------------
+# Blacklists the FFmpeg Multimedia Framework in apt.
+h20-blacklist-ffmpeg() {
+    sudo tee /etc/apt/preferences.d/h20-blacklist-ffmpeg > /dev/null &lt;&lt;'INNER_EOF'
+Package: libavcodec*
+Pin: release *
+Pin-Priority: -1
+
+Package: avcodec*
+Pin: release *
+Pin-Priority: -1
+
+Package: libavformat*
+Pin: release *
+Pin-Priority: -1
+
+Package: avformat*
+Pin: release *
+Pin-Priority: -1
+
+Package: libavutil*
+Pin: release *
+Pin-Priority: -1
+
+Package: avutil*
+Pin: release *
+Pin-Priority: -1
+
+Package: libavfilter*
+Pin: release *
+Pin-Priority: -1
+
+Package: avfilter*
+Pin: release *
+Pin-Priority: -1
+
+Package: libavdevice*
+Pin: release *
+Pin-Priority: -1
+
+Package: avdevice*
+Pin: release *
+Pin-Priority: -1
+
+Package: libpostproc*
+Pin: release *
+Pin-Priority: -1
+
+Package: postproc*
+Pin: release *
+Pin-Priority: -1
+
+Package: libswscale*
+Pin: release *
+Pin-Priority: -1
+
+Package: swscale*
+Pin: release *
+Pin-Priority: -1
+
+Package: libswresample*
+Pin: release *
+Pin-Priority: -1
+
+Package: swresample*
+Pin: release *
+Pin-Priority: -1
+
+Package: ffmpeg
+Pin: release *
+Pin-Priority: -1
+INNER_EOF
+    echo "Blacklisted all FFmpeg/libav-related packages."
+}
+
+# h20-blacklist-gstreamer
+# ------------------------
+# Blacklists the GStreamer Multimedia Framework in apt.
+h20-blacklist-gstreamer() {
+    sudo tee /etc/apt/preferences.d/h20-blacklist-gstreamer > /dev/null &lt;&lt;'INNER_EOF'
+Package: libgstreamer*
+Pin: release *
+Pin-Priority: -1
+
+Package: gstreamer*
+Pin: release *
+Pin-Priority: -1
+
+Package: libgst*
+Pin: release *
+Pin-Priority: -1
+
+Package: gst*
+Pin: release *
+Pin-Priority: -1
+
+Package: gir1.2-gstreamer*
+Pin: release *
+Pin-Priority: -1
+INNER_EOF
+    echo "Blacklisted all GStreamer-related packages."
+}
+
+# h20-unblacklist-gtk
+# --------------------
+# Deletes the file which blacklists the GTK Toolkit.
+h20-unblacklist-gtk() {
+    sudo rm -f /etc/apt/preferences.d/h20-blacklist-gtk
+    echo "GTK blacklist removed."
+}
+
+# h20-unblacklist-gtk
+# --------------------
+# Deletes the file which blacklists the Qt Toolkit.
+h20-unblacklist-qt() {
+    sudo rm -f /etc/apt/preferences.d/h20-blacklist-qt
+    echo "Qt blacklist removed."
+}
+
+# h20-unblacklist-ffmpeg
+# -----------------------
+# Deletes the file which blacklists the FFmpeg Toolkit.
+h20-unblacklist-ffmpeg() {
+    sudo rm -f /etc/apt/preferences.d/h20-blacklist-ffmpeg
+    echo "FFmpeg blacklist removed."
+}
+
+# h20-unblacklist-ffmpeg
+# -----------------------
+# Deletes the file which blacklists the FFmpeg Toolkit.
+h20-unblacklist-gstreamer() {
+    sudo rm -f /etc/apt/preferences.d/h20-blacklist-gstreamer
+    echo "GStreamer blacklist removed."
+}
+OUTER_EOF
+do sleep 1; done
+</pre>
+        </div>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Enable Easy Copying</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            We've been using XTerminal because it's very minimal and battle-hardened compared with other terminal software. Unfortunately, it doesn't provide the standard copy-and-paste niceties that people have come to expect from their desktop applications. To address this, I recommend running the following code, which defines a custom terminal command <code>h20-copy</code> to assist with copying data out of XTerminal (or any other terminal).
+        </p>
+        <p>
+            Security note: the function <code>h20-copy</code> depends on a small utility called <code>xclip</code>, which provides the underlying clipboard functionality. Installing <code>xclip</code> introduces minimal attack surface, and is widely considered safe. However, if you're feeling ultra-paranoid, feel free to skip this step.
+        </p>
+        <div class="bash-script-box">
+            <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# =================== # You can use SHIFT+INSERT to paste into
+#     dXX > xterm     # xterm, or use the middle mouse button.
+# =================== #
+
+# Install xclip for clipboard bridging
+until sudo apt update; do sleep 1; done
+until sudo apt install --no-install-recommends -y xclip; do sleep 1; done
+
+# Append h20-copy function to system-wide bashrc
+until sudo tee -a /etc/bash.bashrc > /dev/null &lt;&lt;'EOF'
+# h20-copy
+# ---------
+# A basic clipboard helper.
+# - No args: copy X11 primary selection to clipboard
+# - With args: run command, copy its output to clipboard
+# Text can only be pasted once (or twice, on some systems) before it is cleared
+# NOTE: h20-copy has known issues with pasting into Mullvad Browser (?!). Long-term
+# solution might be to write an xclip alternative from scratch.
+h20-copy() {
+  if [[ $# -eq 0 ]]; then
+    xclip -o -selection primary | xclip -i -selection clipboard -loops 2
+  else
+    "$@" | xclip -selection clipboard -loops 2
+  fi
+}
+EOF
+do sleep 1; done
+
+# Make the new function available immediately
+until source /etc/bash.bashrc; do sleep 1; done
+</pre>
+        </div>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Try Out The Copy Functionality</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+            </div>
+        </div>
+        <p>
+            Go ahead and try out the new copying functionality.
+        </p>
+        <ul>
+            <li>Type <code>h20-copy</code> into your terminal.</li>
+            <li>Select some text. Without typing anything else, press ENTER.</li>
+            <li>Use CTRL+SHIFT+C to send that to the Qubes global clipboard.</li>
+            <li>Pick another VM, and paste the text into that VM with CTRL+SHIFT+V.</li>
+            <li>Now use CTRL+V to paste the text into text editor (or otherwise).</li>
+        </ul>
+        <p>
+            You can also use h20-copy to get the output from a command into the clipboard. For example:
+        </p>
+        <div class="bash-script-box">
+            <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# Copy file contents to clipboard.
+h20-copy cat FILENAME
+</pre>
+        </div>
+        <p>
+            Known issues:
+        </p>
+        <ul>
+            <li>
+                There's a maximum length of text you can copy.
+            </li>
+            <li>
+                Pasting directly into Mullvad Browser doesn't work, unless you go via the Qubes global clipboard.
+            </li>
+        </ul>
+        <p>
+            That last dot point can be quite frustrating, as Qubes doesn't currently allow the pasting of clipboard text back into the original VM from whence it came. This is a known issue, and I'm working on it.
+        </p>
+        <p>
+            When you're done, be sure to shutdown dXX.
+        </p>
+    </div>
+    <script src="scripts.js"></script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+    <!-- dXX-offline-goff : Open a terminal in dXX-verb. -->
+    <div class="page">
+        <div class="page-header">
+            <h2>General Offline Use: Part 3.</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            <strong>Shut down <code>dXX-offline-goff</code> at this point.</strong>
+        </p>
+        <p>
+            Two more software packages that are probably worth having are Audacity (for audio editing) and OBS Studio (for recording yourself). Both are currently free and open source. However, each comes with its own set of security and privacy risks.
+        <p>
+        <p>
+            Audacity is currently owned by Muse Group. A telemetry incident in 2021 caused extensive community backlash, and brought into question whether Muse Group respects the privacy of its users.
+        </p>
+        <p>
+            OBS is developed and maintained by the OBS Project, which is community-driven. However, the project has corporate sponsors, including both Logitech and YouTube.
+        </p>
+        <p>
+            For the sake of safety, I personally recommend duplicating <code>dXX-offline-goff</code>, and calling the result <code>dXX-offline-goff-plus</code>. Inside this duplicate, we can install Audacity and OBS. This is intended to help control the blast radius, just in case either one of them begins misbehaving in the not-too-distant future.
+        </p>
+        <p>
+            You can open a terminal in <code>dXX-offline-goff-plus</code> like so:
+        </p>
+        <div class="bash-script-box">
+            <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# ==================== # You can use SHIFT+INSERT to paste into
+#     dom0 > xterm     # xterm, or use the middle mouse button.
+# ==================== #
+
+# Open a terminal as the root user
+qvm-run -u root dXX-offline-goff-plus xterm
+</pre>
+        </div>
+        <p>
+            And then run the following code to install Audacity and OBS Studio.
+        </p>
+        <div class="bash-script-box">
+            <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# ===================================== # You can use SHIFT+INSERT to paste into
+#     dXX-offline-goff-plus > xterm     # xterm, or use the middle mouse button.
+# ===================================== #
+
+# Update package list
+until sudo apt update; do sleep 1; done
+
+# Audacity
+# Owned by Muse Group
+# Telemetry incident in 2021 caused extensive community backlash
+until sudo apt install audacity; do sleep 1; done
+
+# OBS Studio
+# Community-driven (but with some corporate sponsors, e.g., Logitech, YouTube)
+# Currently in high regard amongst many FOSS advocates.
+# BUT: May face corporate pressure moving forwards.
+until sudo apt install obs-studio; do sleep 1; done
+</pre>
+        </div>
+    </div>
