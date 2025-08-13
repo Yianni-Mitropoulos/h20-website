@@ -40,7 +40,7 @@
             All my scripts except for ShellGuard should pass the audit with flying colors. If they don't, my website has been hijacked by a bad actor, or else I've received a court order demanding that I backdoor a script.
         </p>
         <p>
-            <strong>If one of my scripts doesn't pass the audit, it is not safe (except for ShellGuard).</strong>
+            <strong>If one of my scripts doesn't pass the audit, it is not safe (except for ShellGuard, which should display exactly 5 warnings, and otherwise pass the audit).</strong>
         </p>
         <p>
             Other people's scripts will not usually pass the full audit, as it's very picky and opinionated. That's fine. It's up to you to decide whether to trust other people's scripts.
@@ -55,13 +55,7 @@
             </div>
         </div>
         <p>
-            Using the Q menu, find the template <code>debian-XX-xfce</code> and open the Settings page.
-        </p>
-        <p>
-            Using the settings page, clone the template, calling the new template <code>debian-XX-xfce-shellaudit</code>.
-        </p>
-        <p>
-            Now open a terminal in the new template (e.g. using the Q menu.) It should have Xfce Terminal available; if so, you can choose that.
+            Using the Q menu (or otherwise), open Xfce Terminal inside <code>debian-XX-xfce</code>.
         </p>
     </div>
     <div class="page">
@@ -73,7 +67,7 @@
             </div>
         </div>
         <p>
-            We'll start off by installing a protection facility called <code>h20-shellguard</code>. It's used in the audit process, and we might as well install it first.
+            We'll start off by installing a small anti-obfuscation utility called <code>h20-shellguard</code>. It's used in the audit process, and we might as well install it first.
         </p>
         <p>
             As a precautionary measure, use a tool of your choice (online or otherwise) to strip any unicode or fancy ASCII control characters from the following script. Then feed it to an LLM and discuss whether it's safe to run. If you're convinced it's okay, run it inside <code>dXX</code>.
@@ -81,9 +75,9 @@
         <div class="bash-script-box">
                 <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
 <pre>
-# =================== # You can use SHIFT+INSERT to paste into
-#     dXX > xterm     # xterm, or use the middle mouse button.
-# =================== #
+# ====================================== # You can use SHIFT+INSERT to paste into
+#     debian-XX-xfce > Xfce Terminal     # Xfce Terminal, or use the middle mouse button.
+# ====================================== #
 
 until sudo tee -a /etc/bash.bashrc > /dev/null &lt;&lt;'EOF'
 # h20-shellguard: Basic Bash Hardening
@@ -159,9 +153,9 @@ do sleep 1; done
         <div class="bash-script-box">
                 <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
 <pre>
-# ================================================= #
-#     debian-XX-xfce-shellaudit > Xfce Terminal     #
-# ================================================= #
+# ====================================== # You can use SHIFT+INSERT to paste into
+#     debian-XX-xfce > Xfce Terminal     # Xfce Terminal, or use the middle mouse button.
+# ====================================== #
 
 # Update packages
 until sudo apt update; do sleep 1; done
@@ -502,7 +496,7 @@ def copy_clipboard(s):
     for sel in ["primary", "clipboard"]:
         subprocess.Popen(['xclip', '-selection', sel], stdin=subprocess.PIPE).communicate(input=s.encode())
 
-def inject_at_first_non_comment(src, injection):
+def prepend_non_comment(src, injection):
     lines = src.splitlines()
     for idx, line in enumerate(lines):
         if not line.strip().startswith(HASH_CHAR):
@@ -554,7 +548,7 @@ def main():
     copy_clipboard(llm)
     print("[INFO] Sanitized script with LLM prompt copied to clipboard.")
     input("[INFO] Press Enter to copy the sanitized script without prompt...")
-    txt = inject_at_first_non_comment(txt, "h20-shellguard")
+    txt = prepend_non_comment(txt, "h20-shellguard")
     copy_clipboard(txt)
     print("[INFO] Sanitized script copied to clipboard. Exiting.")
 
@@ -580,8 +574,7 @@ sudo chmod +x /usr/bin/h20-shellaudit
             Ensure that you shutdown <code>debian-XX-xfce-shellaudit</code> before proceeding. Closing the terminal is not enough.
         </p>
         <p>
-            Using the Q menu, open the 'Create New Qube' utility (the icon consists of a plus superimposed on a blue box) and create an AppVM called <code>shellaudit</code> based on the TemplateVM.
-            For the colour, I recommend Yellow. Make sure it has <code>sys-firewall</code> as the network qube.
+            Using the Q menu, open the 'Create New Qube' utility (the icon consists of a plus superimposed on a blue box) and create an AppVM called <code>shellaudit</code> based on the TemplateVM. For the colour, I recommend Yellow. Make sure it has <code>sys-firewall</code> as the network qube.
         </p>
         <p>
             After creating the AppVM, open the associated Settings dialog. Ensure that the VM is marked as a disposable template (Settings, page 2). This will ensure that up-to-date signatures are downloaded every time you restart the virtual machine.
@@ -607,13 +600,13 @@ sudo chmod +x /usr/bin/h20-shellaudit
             Open a web browser, and navigate to your favourite chatbots again. Use CTRL+SHIFT+V followed by CTRL+V to paste in the prompt, and see what the bots say. Chat with them until you're satisfied that the code is safe. As mentioned earlier, it's better to chat with LLMs that have been trained on malicious or obfuscated code.
         </p>
         <p>
-            Now go back to ShellAudit, and press Enter. This will put the sanitized version of the code into the clipboard, without the LLM prompts. From now on, it's this sanitized version of the code you'll be pasting into your terminals. Do not use the originals you got from my website, or anywhere else, as they haven't been sanitized, and could still contain malicious code.
+            Now go back to ShellAudit, and press Enter. This will put the sanitized version of the code into the clipboard, without the LLM prompts. From now on, it's this sanitized version of the code you'll be pasting into your terminal. Do not use the originals you got from my website, or anywhere else, as they haven't been sanitized, and are thus more likely to contain malicious code.
         </p>
         <p>
             Additionally, try to resist the urge to copy the script back out of the LLM after pasting it in, since that increases the attack surface. For example, if the organization hosting the LLM turns out to be malicious, you don't want to be running code that you got back from their website.
         </p>
         <p>
-            Note that when ShellAudit is used with scripts from other websites, tolerating certain warnings might be OK, or not OK, depending on the nature of the warning and your risk appetite. Consider asking AI to rewrite the script to meet the (arguably excessive) ShellAudit requirements.
+            Note that when ShellAudit is used with scripts from other websites, tolerating certain warnings might be OK, or not OK, depending on the nature of the warning and your risk appetite. Consider asking AI to rewrite the script to meet the (arguably excessive) ShellAudit requirements. If you don't want to do that, consider using a less opinionated auditing tool.
         </p>
     </div>
     <script src="scripts.js"></script>
