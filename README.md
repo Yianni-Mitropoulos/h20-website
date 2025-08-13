@@ -13,11 +13,16 @@ And remember, always:
 **Privacy is Not Suspicious**
 
 ## Table of Contents
+- [URL](#url)  
 - [About the Project](#about-the-project)  
 - [Getting Started](#getting-started)  
 - [License](#license)  
 - [Stance on Criminality](#stance-on-criminality)  
 - [Disclaimer](#disclaimer)  
+
+## URL
+
+https://yianni-mitropoulos.github.io/h20-website/
 
 ## About the Project
 
@@ -35,7 +40,7 @@ The guidance provided by Hero To Zero is offered in the spirit of love, and shou
 
 To get started:
 
-1. Visit the homepage at [there-is-currently-no-page](https://hero-to-zero.com).
+1. Visit the homepage at [github.io](https://yianni-mitropoulos.github.io/h20-website/).
 2. Work through the tutorials, one step at a time.
 3. Stay updated with our YouTube channel [there-is-currently-no-channel] for news on emerging threats and new solutions.
 
