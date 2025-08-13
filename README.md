@@ -13,12 +13,11 @@ And remember, always:
 **Privacy is Not Suspicious**
 
 ## Table of Contents
--[About the Project](#about-the-project)
--[Features](#features)
--[Getting Started](#getting-started)
--[How to Contribute](#how-to-contribute)
--[License](#license)
--[Disclaimer](#disclaimer)
+- [About the Project](#about-the-project)  
+- [Getting Started](#getting-started)  
+- [License](#license)  
+- [Stance on Criminality](#stance-on-criminality)  
+- [Disclaimer](#disclaimer)  
 
 ## About the Project
 
