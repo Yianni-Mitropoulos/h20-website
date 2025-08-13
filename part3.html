@@ -76,68 +76,6 @@ qvm-run -u root dXX xterm
     </div>
     <div class="page">
         <div class="page-header">
-            <h2>Limit Data Retention</h2>
-            <div class="button-container">
-                <button class="prev-next-btn" onclick="prev()">Back</button>
-                <button class="prev-next-btn" onclick="next()">Next</button>
-            </div>
-        </div>
-        <p>
-            Before we get started, I recommend running the following code in <code>dXX</code>. It places limits on the retention of logs and terminal history, which promotes privacy. Users who are focused more on security than privacy may wish to skip this step.
-        </p>
-        <p>
-            <strong>Skipping this step may come back to bite you, if privacy ever becomes a concern.</strong>
-        </p>
-        <p>
-            <strong>If you decide to skip it, be sure to make a mental note that you did so.</strong>
-        </p>
-        <div class="bash-script-box">
-                <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
-<pre>
-# =================== # You can use SHIFT+INSERT to paste into
-#     dXX > xterm     # xterm, or use the middle mouse button.
-# =================== #
-
-#### 0. Ensure logs are redirected to RAM and purged on shutdown
-# Mount /var/log as a tmpfs (100MB size, ephemeral) and retry until success
-until sudo mount -t tmpfs -o size=100M,mode=0755 tmpfs /var/log; do sleep 1; done
-
-# Persist the mount in /etc/fstab (idempotent + retry-safe)
-FSTAB_LINE='tmpfs /var/log tmpfs defaults,size=100m,mode=0755 0 0'
-until grep -qF "$FSTAB_LINE" /etc/fstab || echo "$FSTAB_LINE" | sudo tee -a /etc/fstab > /dev/null; do sleep 1; done
-
-# Configure systemd-journald to use volatile (RAM-only) logging
-until sudo mkdir -p /etc/systemd/journald.conf.d; do sleep 1; done
-until echo -e '[Journal]\nStorage=volatile' | sudo tee /etc/systemd/journald.conf.d/volatile.conf > /dev/null; do sleep 1; done
-
-# Restart journald to apply the volatile logging config
-until sudo systemctl restart systemd-journald; do sleep 1; done
-
-#### 1. Limit retention of bash commands
-# Comment out HIST or shopt lines in /etc/skel/.bashrc
-file="/etc/skel/.bashrc"
-hash_char=$'\x23' # This is not obfuscation, just trying to pass shellguard test
-until awk -v h="$hash_char" -f - "$file" > "$file.new" &lt;&lt;'EOF'
-/^[[:space:]]*(HIST|shopt)/ {
-    sub(/^[[:space:]]*/, "&" h " ")
-}
-{ print }
-EOF
-do sleep 1; done
-until mv "$file.new" "$file"; do sleep 1; done
-
-# Ensure bash history is limited to 10 commands, stored in RAM, and purged on shutdown
-until sudo tee -a /etc/bash.bashrc > /dev/null &lt;&lt;'EOF'
-export HISTSIZE=10
-export HISTFILESIZE=0
-export HISTFILE=/dev/null
-EOF
-do sleep 1; done
-</pre>
-        </div>
-    </div>
-    <div class="page">
-        <div class="page-header">
             <h2>Make Shellguard Available</h2>
             <div class="button-container">
                 <button class="prev-next-btn" onclick="prev()">Back</button>
@@ -145,13 +83,16 @@ do sleep 1; done
             </div>
         </div>
         <p>
-            Our script auditor from earlier works best when paired with hardened Bash settings.
+            As mentioned in the previous guide, the ShellAudit produces scripts that begin with a call to <code>h20-shellguard</code>. 
         </p>
         <p>
-            The following code allows you to write <code>h20-shellguard</code> to harden your Bash settings against code obfuscation. It also auto-applies shellguard to code run from the <code>QubesIncoming</code> folder. When combined with <code>h20-shellaudit</code>, this provides a degree of protection against running obfuscated malicious code. But note that shellguard does NOT protect against malicious code when used alone; it MUST be used as part of a pipeline that audits for malicious behaviors.
+            This means the scripts it produces will not work unless ShellGuard is installed.
         </p>
         <p>
-            After performing this step, close your terminal. Then reopen it again with root permissions from <code>dom0</code>. Advanced users can use the <code>source</code> command instead.
+            So, let's install it.
+        </p>
+        <p>
+            Note that ShellGuard should produce exactly five warnings when you run it through ShellAudit. If it produces a different number of warnings, the website has been compromised, and you should stop immediately.
         </p>
         <div class="bash-script-box">
                 <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
@@ -171,12 +112,14 @@ until sudo tee -a /etc/bash.bashrc > /dev/null &lt;&lt;'EOF'
 # - Make unsafe patterns more likely to fail early
 # - Reduce attack surface for shell abuse
 #
-# It does NOT provide meaningful isolation or sandboxing when used alone.
-# A malicious script or user can reverse the changes.
-# It is ONLY useful in tandem with auditing tools (like ShellAudit, or otherwise).
+# It does NOT provide meaningful protection, and a malicious script or user can
+# reverse the changes imposed by ShellGuard. It is ONLY useful in tandem with
+# auditing tools (like ShellAudit, or otherwise).
 #
 # By default, it must be activated manually via 'h20-shellguard'.
-# It is automatically applied to all shells inside '/home/user/QubesIncoming/*'.
+# But note that ShellAudit inserts its own h20-shellguard commands.
+# So if you got the script from ShellAudit, you don't have to manually activate ShellGuard.
+#
 # There is no associated 'disable' command. To revert, close the terminal and reopen it.
 h20-shellguard() {
     echo "[h20-shellguard] Protections ENABLED in this shell session."
@@ -210,30 +153,24 @@ h20-shellguard() {
     stty -echoctl 2>/dev/null || true
     stty intr '^C' erase '^H' kill '^U' 2>/dev/null || true
 }
-
-# The following code ensures that if a shell is run from anywhere under
-# /home/user/QubesIncoming, protections are automatically applied, even
-# for non-interactive scripts.
-case "$PWD" in
-  /home/user/QubesIncoming* )
-    h20-shellguard
-    ;;
-esac
 EOF
 do sleep 1; done
-</pre> 
+</pre>
         </div>
+        <p>
+            After performing this step, close your terminal. Then reopen it again with root permissions from <code>dom0</code>. Advanced users can use the <code>source</code> command instead.
+        </p>
     </div>
     <div class="page">
         <div class="page-header">
-            <h2>Make ShellGuard Into A Habit</h2>
+            <h2>Use ShellAudit From Now On</h2>
             <div class="button-container">
                 <button class="prev-next-btn" onclick="prev()">Back</button>
                 <button class="prev-next-btn" onclick="next()">Next</button>
             </div>
         </div>
         <p>
-            From now on, we run <code>h20-shellguard</code> in any terminals we're planning to paste code into. That's in addition to <code>h20-shellaudit</code>. By the way, you're not allowed to copy and paste the text <code>h20-shellguard</code> from a foreign source. You have to physically type it out. Go ahead and do that now.
+            From now on, run all the scripts I give you through <code>h20-shellaudit</code>. All code provided by Hero To Zero should pass the opinionated audit completely, except for ShellGuard, which should display exactly 5 warnings. For code that's copied and pasted from outside one of these guides often won't pass the audit. Consider using AI to rewrite the script in that case. If you're not comfortably doing that, I suggest looking for other, less opinionated tools to help with the audit process.
         </p>
     </div>
     <div class="page">
@@ -245,7 +182,7 @@ do sleep 1; done
             </div>
         </div>
         <p>
-            The following code should be executed in <code>dXX</code>. Its purpose is to define functions that reroute us through a random Swiss mirror (since Switzerland which has good privacy laws), and to avoid installing proprietary blobs (which represent a security risk).
+            The following code should be executed in <code>dXX</code>. Its purpose is to define functions that reroute us through a random Swiss mirror (since Switzerland has very good privacy laws), and to avoid installing proprietary blobs (which represent a security risk).
         </p>
         <p>
             Re-enabling proprietary blobs is straightforward, and sometimes necessary. Functions to do this are therefore also included.
@@ -341,7 +278,7 @@ do sleep 1; done;
     </div>
     <div class="page">
         <div class="page-header">
-            <h2>Configure Aptitude</h2>
+            <h2>Configure Aptitude: Part 2</h2>
             <div class="button-container">
                 <button class="prev-next-btn" onclick="prev()">Back</button>
                 <button class="prev-next-btn" onclick="next()">Next</button>
@@ -349,6 +286,9 @@ do sleep 1; done;
         </div>
         <p>
             Close your terminal, and reopen it again. Then run the following code. It activates the new mirrors, disabled proprietary blobs, and uses the new mirrors to update your system.
+        </p>
+        <p>
+            The script below also enables passwordless sudo. This improves the security of our overall workflow, by allowing us to avoid running as the root user, and run instead as a standard user. This, in turn, force dangerous commands to be prefaced by <code>sudo</code>, which improves auditability. Later on, we'll remove passwordless sudo from a handful of specific templates, in order to improve their security posture. However, for now, it's better and more secure to have passwordless sudo installed, and to simply avoid running as the root user.
         </p>
         <p>
             Reactivating propriatary blobs can be done later, on a case-by-case basis. For now, I'd argue that disabling them is the correct option.            
@@ -375,6 +315,7 @@ h20-register-debian-sources /etc/apt/sources.list "main"
 echo 'Performing full upgrade via the new mirror'
 until sudo apt update; do sleep 1; done
 until sudo apt install -y apt-transport-https ca-certificates; do sleep 1; done # Ensure updates are over HTTPS
+until sudo apt install -y qubes-core-agent-passwordless-root; # This helps us avoid running as root user, improving auditability. It can be uninstalled later
 until sudo apt full-upgrade; do sleep 1; done
 until sudo apt autoremove; do sleep 1; done
 until sudo apt clean; do sleep 1; done
@@ -561,6 +502,68 @@ do sleep 1; done
 # Reapply .conf files
 until sysctl --system; do sleep 1; done
 echo '[INFO] --- DEBIAN HARDENING DONE ---'
+</pre>
+        </div>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Limit Data Retention</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            Before we get started, I recommend running the following code in <code>dXX</code>. It places limits on the retention of logs and terminal history, which promotes privacy. Users who are focused more on security than privacy may wish to skip this step.
+        </p>
+        <p>
+            <strong>Skipping this step may come back to bite you, if privacy ever becomes a concern.</strong>
+        </p>
+        <p>
+            <strong>If you decide to skip it, be sure to make a mental note that you did so.</strong>
+        </p>
+        <div class="bash-script-box">
+                <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# =================== # You can use SHIFT+INSERT to paste into
+#     dXX > xterm     # xterm, or use the middle mouse button.
+# =================== #
+
+#### 0. Ensure logs are redirected to RAM and purged on shutdown
+# Mount /var/log as a tmpfs (100MB size, ephemeral) and retry until success
+until sudo mount -t tmpfs -o size=100M,mode=0755 tmpfs /var/log; do sleep 1; done
+
+# Persist the mount in /etc/fstab (idempotent + retry-safe)
+FSTAB_LINE='tmpfs /var/log tmpfs defaults,size=100m,mode=0755 0 0'
+until grep -qF "$FSTAB_LINE" /etc/fstab || echo "$FSTAB_LINE" | sudo tee -a /etc/fstab > /dev/null; do sleep 1; done
+
+# Configure systemd-journald to use volatile (RAM-only) logging
+until sudo mkdir -p /etc/systemd/journald.conf.d; do sleep 1; done
+until echo -e '[Journal]\nStorage=volatile' | sudo tee /etc/systemd/journald.conf.d/volatile.conf > /dev/null; do sleep 1; done
+
+# Restart journald to apply the volatile logging config
+until sudo systemctl restart systemd-journald; do sleep 1; done
+
+#### 1. Limit retention of bash commands
+# Comment out HIST or shopt lines in /etc/skel/.bashrc
+file="/etc/skel/.bashrc"
+hash_char=$'\x23' # This is not obfuscation, just trying to pass shellguard test
+until awk -v h="$hash_char" -f - "$file" > "$file.new" &lt;&lt;'EOF'
+/^[[:space:]]*(HIST|shopt)/ {
+    sub(/^[[:space:]]*/, "&" h " ")
+}
+{ print }
+EOF
+do sleep 1; done
+until mv "$file.new" "$file"; do sleep 1; done
+
+# Ensure bash history is limited to 10 commands, stored in RAM, and purged on shutdown
+until sudo tee -a /etc/bash.bashrc > /dev/null &lt;&lt;'EOF'
+export HISTSIZE=10
+export HISTFILESIZE=0
+export HISTFILE=/dev/null
+EOF
+do sleep 1; done
 </pre>
         </div>
     </div>
