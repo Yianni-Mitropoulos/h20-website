@@ -33,18 +33,6 @@
         <p>
             Today's guide will therefore help you install a tool called <code>h20-shellaudit</code>. It provides a quick and easy way to audit scripts you find, and combines classical anti-obfuscation techniques with AI assistance.
         </p>
-        <p>
-            When combined with a tool called <code>h20-shellguard</code> that I'll provide in the next guide, the auditor provides a powerful defense against a number of common attack vectors. However, no script is perfect. When used with random scripts you find on the internet, expect both false positives and false negatives. Judge for yourself how to proceed.
-        </p>
-        <p>
-            All my scripts except for ShellGuard should pass the audit with flying colors. If they don't, my website has been hijacked by a bad actor, or else I've received a court order demanding that I backdoor a script.
-        </p>
-        <p>
-            <strong>If one of my scripts doesn't pass the audit, it is not safe (except for ShellGuard, which should display exactly 5 warnings, and otherwise pass the audit).</strong>
-        </p>
-        <p>
-            Other people's scripts will not usually pass the full audit, as it's very picky and opinionated. That's fine. It's up to you to decide whether to trust other people's scripts.
-        </p>
     </div>
     <div class="page">
         <div class="page-header">
@@ -145,10 +133,10 @@ do sleep 1; done
             </div>
         </div>
         <p>
-            Once you've shutdown and restarted the template, type <code>h20-shellguard</code> into your terminal and hit ENTER. Do not copy the command from here using the clipboard, as this site may have been compromised, in which case anything you copy from here may contain malicious hidden characters.
+            Close and reopen your terminal (or just <code>source ~/.bashrc</code>). And then type <code>h20-shellguard</code> into your terminal and hit ENTER. Do not copy the command from here using the clipboard, as this site may have been compromised, in which case anything you copy from here may contain malicious hidden characters.
         </p>
         <p>
-            Once you've run <code>h20-shellguard</code>, give the following code to one or more AI chatbots that you trust. Ask the bots for a clear and simple explanation of what the code does. Emphasise that you're looking for attempts at obfuscation, unsafe behaviours, or anything tricky that might have been put there to confuse, deceive, or exploit the user. The more chatbots you ask, the better. If you can find chatbots that have been specifically trained on malicious and obfuscated code, that's even better. Once you've convinced yourself that the code is safe, copy-and-paste the code into <code>debian-XX-xfce-shellaudit</code>. This will install ShellAudit.
+            After doing this, give the following code to one or more AI chatbots that you trust. Ask the bots for a clear and simple explanation of what the code does. Emphasise that you're looking for attempts at obfuscation, unsafe behaviours, or anything tricky that might have been put there to confuse, deceive, or exploit the user. The more chatbots you ask, the better. If you can find chatbots that have been specifically trained on malicious and obfuscated code, that's even better. Once you've convinced yourself that the code is safe, copy-and-paste the code into <code>debian-XX-xfce</code>. This will install ShellAudit.
         </p>
         <div class="bash-script-box">
                 <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
@@ -571,13 +559,13 @@ sudo chmod +x /usr/bin/h20-shellaudit
             </div>
         </div>
         <p>
-            Ensure that you shutdown <code>debian-XX-xfce-shellaudit</code> before proceeding. Closing the terminal is not enough.
+            Now shutdown <code>debian-XX-xfce</code>.
         </p>
         <p>
-            Using the Q menu, open the 'Create New Qube' utility (the icon consists of a plus superimposed on a blue box) and create an AppVM called <code>shellaudit</code> based on the TemplateVM. For the colour, I recommend Yellow. Make sure it has <code>sys-firewall</code> as the network qube.
+            Using the Q menu, open Xfce Terminal from <code>default-dvm</code>.
         </p>
         <p>
-            After creating the AppVM, open the associated Settings dialog. Ensure that the VM is marked as a disposable template (Settings, page 2). This will ensure that up-to-date signatures are downloaded every time you restart the virtual machine.
+            We'll now test ShellAudit.
         </p>
     </div>
     <div class="page">
@@ -588,7 +576,7 @@ sudo chmod +x /usr/bin/h20-shellaudit
             </div>
         </div>
         <p>
-            Use the ShellAudit AppVM to open a new Xfce Terminal. Type <code>h20-shellaudit</code> to start the software.
+            Type <code>h20-shellaudit</code> to start the software.
         </p>
         <p>
             Go back to the script from earlier. The big one, that installed ShellAudit. Copy the script, and paste it into a running instance of itself. After you've pasted, press CTRL+D, and check the warnings. If you see any, STOP IMMEDIATELY; scripts I provide should not generate any warnings, period.
