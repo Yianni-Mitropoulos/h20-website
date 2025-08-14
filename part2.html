@@ -190,10 +190,10 @@ LLM_PROMPT = (
     " - Subshell variable scope confusion: Assigning or modifying variables within a subshell, then using them in the parent shell.\n"
     " - Misleading command substitution: Using command substitution like $(cd tempdir && do_something) where the intent is unclear.\n"
     " - Disguised silent failures: Chaining commands with && or || in non obvious ways, or relying on failure of certain commands, to bypass critical checks or logic branches.\n"
-    " - Function and subshell side effect confusion: Mixing function calls and subshells, intentionally obfuscating which operations persist and which do not, making it hard to follow control flow or detect persistent changes.\n"
+    " - Function and subshell side effect confusion: Mixing function calls and subshells, intentionally obfuscating which operations persist and which do not.\n"
     " - Misuse of local versus global variables: Deliberately declaring variables with ambiguous scope to hide their impact, causing logic errors that benefit obfuscated or malicious code paths.\n"
-    " - Redefining or shadowing commands: Overriding core commands or built ins within the script context to change script logic in subtle, hard to trace ways, for example redefining ls, cd, or cat to hijack script flow.\n"
-    " - Logic branches controlled by hidden state: Script logic that depends on environmental state, hidden files, or external conditions not apparent in the code, allowing for covert conditional execution paths, such as branching on existence of hidden files.\n"
+    " - Redefining or shadowing standard commands.\n"
+    " - Logic branches controlled by hidden state: Script logic that depends on environmental state, hidden files, or external conditions not apparent in the code.\n"
     " - Non atomic check then act logic.\n"
     " - Overly complex printf logic.\n"
     " - Use of sudo where it is not needed.\n"
@@ -364,7 +364,7 @@ def check_long_lines(txt, maxlen=LINE_MAX_LEN):
     flagged = []
     for i, line in enumerate(txt.splitlines(), 1):
         if len(line) > maxlen:
-            flagged.append(f"[WARNING: LONG LINE] Line {i} is longer than {max_len} chars ({len(line)} chars)")
+            flagged.append(f"[WARNING: LONG LINE] Line {i} is longer than {maxlen} chars ({len(line)} chars)")
     return flagged
 
 def check_heredocs(txt, maxlen=UNQUOTED_HEREDOC_MAX_LEN):
@@ -552,7 +552,7 @@ sudo chmod +x /usr/bin/h20-shellaudit
     </div>
     <div class="page">
         <div class="page-header">
-            <h2>Create a ShellAudit AppVM</h2>
+            <h2>Open A Disposable</h2>
             <div class="button-container">
                 <button class="prev-next-btn" onclick="prev()">Back</button>
                 <button class="prev-next-btn" onclick="next()">Next</button>
@@ -579,7 +579,7 @@ sudo chmod +x /usr/bin/h20-shellaudit
             Type <code>h20-shellaudit</code> to start the software.
         </p>
         <p>
-            Go back to the script from earlier. The big one, that installed ShellAudit. Copy the script, and paste it into a running instance of itself. After you've pasted, press CTRL+D, and check the warnings. If you see any, STOP IMMEDIATELY; scripts I provide should not generate any warnings, period.
+            Now go back to the script from earlier. The big one, that installed ShellAudit. Copy the script, and paste it into a running instance of itself. After you've pasted, press CTRL+D, and check the warnings. If you see any, STOP IMMEDIATELY; with the exception of ShellGuard, the scripts I provide should not generate any warnings, period.
         </p>
         <p>
             Now use CTRL+SHIFT+C to copy to the global clipboard.
