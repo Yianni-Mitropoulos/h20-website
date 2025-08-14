@@ -6,23 +6,18 @@ Our goal is to educate users on how to avoid being targeted by hackers, scammers
 
 We do not condone criminal activity of any kind. Rather, our focus is on educating ordinary people on what they can do to protect themselves and their families.
 
-Whatever you do, be sure to do it with respect for the law, with love in your heart, and with the public interest in mind.
+So, whatever you do, be sure to do it with respect for the law, with love in your heart, and with the public interest in mind.
 
-And remember, always:
+## Website URL
 
-**Privacy is Not Suspicious**
+https://yianni-mitropoulos.github.io/h20-website/
 
 ## Table of Contents
-- [URL](#url)  
 - [About the Project](#about-the-project)  
 - [Getting Started](#getting-started)  
 - [License](#license)  
 - [Stance on Criminality](#stance-on-criminality)  
 - [Disclaimer](#disclaimer)  
-
-## URL
-
-https://yianni-mitropoulos.github.io/h20-website/
 
 ## About the Project
 
