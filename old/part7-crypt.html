@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setting Up The Crypt</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="page" data-format-specifier="XX">
+        <div class="page-header">
+            <h2>Choose Debian Version</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>What version of Debian are you targeting?</p>
+        <input type="text" id="XX" placeholder="Enter the version of Debian you're using.">
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Create Clones</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            Before starting, ensure the <code>dXX-crypt</code> qube is not running (it's not enough to exit the <code>dXX-crypt</code> terminal).
+        </p>
+        <p>
+            Now create the following TemplateVM's by cloning <code>dXX-crypt</code>.
+        </p>
+        <ul>
+            <li><code>dXX-crypt-passgen </code> (For generating passwords)</li>
+            <li><code>dXX-crypt-files   </code> (For storing your files)</li>
+        </ul>
+    </div>
+    <div class="page">
+        <div class="page-header" data-format-specifier="XX">
+            <h2>Setting Up The Library Checker: Part 1.</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            We'll now set up the qube for checking software dependencies. This will help us compartmentalize risk in a logical and evidence-based way.
+        </p>
+        <p>
+            The following code opens a terminal with appropriate permissions.
+        </p>
+        <div class="bash-script-box">
+            <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# ==================== # You can use SHIFT+INSERT to paste into
+#     dom0 > xterm     # xterm, or use the middle mouse button.
+# ==================== #
+
+# Open a terminal as the root user
+qvm-run -u root dXX-crypt-libcheck xterm
+</pre>
+        </div>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Setting Up The Library Checker: Part 2.</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            Now run the following code, which defines a function called <code>h20-libcheck</code>, and provides a reasonable configuration file.
+        </p>
+        <div class="bash-script-box">
+            <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# ================================= # You can use SHIFT+INSERT to paste into
+#     dXX-crypt-libcheck > xterm    # xterm, or use the middle mouse button.
+# ================================= #
+
+# Create the libcheck program
+until sudo tee /usr/bin/h20-libcheck > /dev/null &lt;&lt;'EOF'
+#!/usr/bin/env python3
+
+"""
+h20-libcheck: Library cluster analyzer for apt install scripts.
+- Customizable clusters and hierarchies
+- Config files are stored in ~/.h20-libcheck/
+- Produces pretty, fine-grained, colorized output
+"""
+
+import os
+import fnmatch
+import subprocess
+import re
+from textwrap import fill
+
+VERTEX_PATH = os.path.expanduser("~/.h20-libcheck/vertex")
+EDGES_PATH  = os.path.expanduser("~/.h20-libcheck/edges")
+
+DEFAULT_VERTEX = """\
+# ==================== #
+#     GUI TOOLKITS     #
+# ==================== #
+
+# GTK
+gtkbase: glib* pango* atk* gdk* libglib* libpango* libatk* libgdk*
+gtk2: gtk2* libgtk2*
+gtk3: gtk3* libgtk3*
+gtk4: gtk4* libgtk4*
+gtk:  # Libcluster for unified GTK attack surface, no direct patterns
+
+# Qt
+qtbase: qtbase* libqtbase*
+qt5: qt5* libqt5*
+qt6: qt6* libqt6*
+qt:  # Libcluster for unified Qt attack surface, no direct patterns
+
+# =========================== #
+#     DEVELOPER PLATFORMS     #
+# =========================== #
+
+# KDE
+kdebase: kde-runtime kde-runtime-data
+kf5: kf5* libkf5*
+kf6: kf6* libkf6*
+kde: kde*
+
+# ====================== #
+#     MEDIA CLUSTERS     #
+# ====================== #
+
+# Media Codecs
+ffmpeg: ffmpeg* libavcodec* libavformat* libavutil*
+gstreamer: gstreamer* libgst*
+
+# Media Players
+vlc: vlc*
+
+# ============================ #
+#     DESKTOP ENVIRONMENTS     #
+# ============================ #
+
+gnome: gnome* gdm*
+plasma: plasma* kde-plasma*
+xfce: xfce*
+lxde: lxde* lxsession* openbox* pcmanfm*
+lxqt: lxqt* pcmanfm-qt*
+mate: mate-session-manager mate-panel mate-desktop mate-control-center mate-settings-daemon caja* marco*
+cinnamon: cinnamon* nemo*
+"""
+
+DEFAULT_EDGES = """\
+# ==================== #
+#     GUI TOOLKITS     #
+# ==================== #
+
+# GTK
+gtkbase --&gt; gtk2
+gtkbase --&gt; gtk3
+gtkbase --&gt; gtk4
+gtk2 --&gt; gtk
+gtk3 --&gt; gtk
+gtk4 --&gt; gtk
+
+# Qt
+qtbase --&gt; qt5
+qtbase --&gt; qt6
+qt5 --&gt; qt
+qt6 --&gt; qt
+
+# =========================== #
+#     DEVELOPER PLATFORMS     #
+# =========================== #
+
+# KDE
+kdebase --&gt; kf5
+kdebase --&gt; kf6
+kf5 --&gt; kde
+kf6 --&gt; kde
+
+# ====================== #
+#     MEDIA CLUSTERS     #
+# ====================== #
+
+ffmpeg --&gt; vlc
+
+# ======================================== #
+#    FINE GRAINED TOOLKIT DEPENDENCIES     #
+# ======================================== #
+
+# Developer Platforms
+qt5 --&gt; kf5
+qt6 --&gt; kf6
+
+# Desktop Environments
+gtk2 --&gt; lxde
+gtk3 --&gt; xfce
+gtk3 --&gt; mate
+gtk3 --&gt; cinnamon
+gtk4 --&gt; gnome
+qt5 --&gt; lxqt
+qt6 --&gt; plasma
+"""
+
+# =================== Core classes ===================
+
+class Vertex:
+    """
+    Represents a cluster (toolkit, DE, framework, etc.)
+    """
+    def __init__(self, name, patterns):
+        self.name = name
+        self.patterns = [p.strip() for p in patterns if p.strip()]
+        self.children = []  # type: list[Vertex]
+        self.parents = []   # type: list[Vertex]
+        self.current = set()       # Directly-matched packages for this dry run
+        self.accumulator = set()   # Accumulates over all dry runs
+    def __repr__(self):
+        return f"Vertex({self.name})"
+
+class Digraph:
+    """
+    Represents the user-customizable hierarchy.
+    """
+    def __init__(self):
+        self.vertices = {}  # name -> Vertex
+
+    def add_vertex(self, name, patterns):
+        self.vertices[name] = Vertex(name, patterns)
+
+    def add_edge(self, parent, child):
+        if not parent or not child:
+            return  # Ignore empty edges
+        if parent not in self.vertices or child not in self.vertices:
+            raise ValueError(f"Unknown vertex in edge: {parent} --&gt; {child}")
+        self.vertices[parent].children.append(self.vertices[child])
+        self.vertices[child].parents.append(self.vertices[parent])
+
+    def reset_states(self):
+        for v in self.vertices.values():
+            v.current = set()
+            v.accumulator = set()
+
+    def fill_current(self, pkglist):
+        """
+        For each vertex, add any matching package names (from pkglist) to .current
+        """
+        for v in self.vertices.values():
+            for pkg in pkglist:
+                for pat in v.patterns:
+                    if fnmatch.fnmatch(pkg, pat):
+                        v.current.add(pkg)
+
+    def transfer_current_to_accum(self):
+        """
+        After each install line: merge .current into .accumulator, then clear .current
+        """
+        for v in self.vertices.values():
+            v.accumulator.update(v.current)
+            v.current.clear()
+
+    def swap_current_and_accumulator(self):
+        """
+        For final summary: swap .current and .accumulator in all vertices
+        """
+        for v in self.vertices.values():
+            v.current, v.accumulator = v.accumulator, v.current
+
+    def maximal_vertices(self):
+        """
+        Returns a sorted list of maximal clusters for this run:
+          - A vertex is maximal if it has a non-empty .current set
+            AND no descendant (child, grandchild, etc.) has a non-empty .current set.
+        """
+        candidates = {v for v in self.vertices.values() if v.current}
+        maximals = set(candidates)
+        visited = set()
+        def remove_descendants(v):
+            for child in v.children:
+                if child in maximals:
+                    maximals.remove(child)
+                if child not in visited:
+                    visited.add(child)
+                    remove_descendants(child)
+        for v in candidates:
+            if v not in visited:
+                visited.add(v)
+                remove_descendants(v)
+        return sorted(maximals, key=lambda x: x.name)
+
+    def cluster_matches_and_libstring(self, width=80, header="Libstring"):
+        """
+        Returns the pretty-printed output for matched clusters and libstring.
+        """
+        out_lines = []
+        any_found = False
+        for v in sorted(self.vertices.values(), key=lambda x: x.name):
+            if v.current:
+                pkglist = ', '.join(sorted(v.current))
+                # Indent and wrap long lines
+                head = f"{v.name}: "
+                wrapped = fill(pkglist, width=width, initial_indent=head, subsequent_indent=' ' * len(head))
+                out_lines.append(wrapped)
+                any_found = True
+        if not any_found:
+            out_lines.append("(No clusters matched for this install line)")
+        maximal = [v.name for v in self.maximal_vertices()]
+        out_lines.append(f"{header}: {'-'.join(maximal) if maximal else '(none)'}\n")
+        return "\n".join(out_lines)
+
+# =================== Utility functions ===================
+
+def load_vertices(vertexfile):
+    """
+    Reads ~/.h20-libcheck/vertex, skipping comments and blank lines.
+    Returns a list of (name, [patterns])
+    """
+    vertices = []
+    with open(vertexfile, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith('#'): continue
+            if ':' not in line:
+                raise ValueError(f"Malformed vertex line: {line}")
+            name, patterns = line.split(':', 1)
+            patlist = [p for p in patterns.strip().split()]
+            vertices.append((name.strip(), patlist))
+    return vertices
+
+def load_edges(edgefile):
+    """
+    Reads ~/.h20-libcheck/edges, skipping comments and blank lines.
+    Returns a list of (parent, child)
+    """
+    edges = []
+    with open(edgefile, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith('#'): continue
+            if '--&gt;' not in line:
+                raise ValueError(f"Malformed edge line: {line}")
+            parent, child = [s.strip() for s in line.split('--&gt;')]
+            edges.append((parent, child))
+    return edges
+
+def extract_apt_install_lines(script_lines):
+    """
+    Extracts *only* the actual apt or apt-get install commands from possibly complex shell lines.
+    Returns a list of plain install lines, suitable for dry-run analysis.
+    """
+    install_lines = []
+    apt_pattern = re.compile(r'(?:^|[\s;|&])((sudo\s+)?apt(-get)?\s+[^;|&]*?install[^\n;|&]*)', re.IGNORECASE)
+    for line in script_lines:
+        if line.strip().startswith('#'):
+            continue
+        # Extract only the first apt or apt-get install command (ignore everything else)
+        match = apt_pattern.search(line)
+        if match:
+            install_line = match.group(1)
+            # Remove any leading "sudo "
+            if install_line.strip().startswith('sudo '):
+                install_line = install_line.strip()[5:]
+            install_lines.append(install_line.strip())
+    return install_lines
+
+def dryrun_pkgs(apt_line):
+    """
+    Executes the apt install line in dry-run mode to extract
+    the packages that would be installed.
+    Returns a list of package names (or [] on failure).
+    """
+    # Transform to 'apt-get ... --dry-run --yes'
+    core = apt_line
+    if 'apt-get' not in apt_line:
+        core = core.replace('apt ', 'apt-get ', 1)
+    if '--dry-run' not in core:
+        core += ' --dry-run'
+    if '--yes' not in core:
+        core += ' --yes'
+    # Extract from first 'apt-get' oncrypt
+    core_parts = []
+    found_install = False
+    for tok in core.strip().split():
+        if tok in ('apt', 'apt-get'):
+            found_install = True
+            core_parts.append('apt-get')
+        elif found_install:
+            core_parts.append(tok)
+    cmd = ' '.join(core_parts)
+    try:
+        out = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT, encoding='utf-8')
+        pkgs = []
+        for line in out.splitlines():
+            if line.startswith('Inst '):
+                pkg = line.split()[1]
+                pkgs.append(pkg)
+        return pkgs
+    except subprocess.CalledProcessError as e:
+        print(f"\033[31mERROR: dry-run failed for line:\n  {apt_line}\n  {e.output.strip()}\033[0m\n")
+        return []
+
+def ensure_files():
+    """
+    On first run: create ~/.h20-libcheck/vertex and ~/.h20-libcheck/edges with robust defaults
+    """
+    os.makedirs(os.path.dirname(VERTEX_PATH), exist_ok=True)
+    if not os.path.isfile(VERTEX_PATH):
+        with open(VERTEX_PATH, 'w') as f:
+            f.write(DEFAULT_VERTEX)
+    if not os.path.isfile(EDGES_PATH):
+        with open(EDGES_PATH, 'w') as f:
+            f.write(DEFAULT_EDGES)
+
+# =================== Main program ===================
+
+def main():
+    ensure_files()
+    print(f"\033[1;32m[libcheck]\033[0m Using vertex file: {VERTEX_PATH}")
+    print(f"\033[1;32m[libcheck]\033[0m Using edges file:  {EDGES_PATH}")
+
+    # Build digraph from user files
+    dg = Digraph()
+    for name, pats in load_vertices(VERTEX_PATH):
+        dg.add_vertex(name, pats)
+    for parent, child in load_edges(EDGES_PATH):
+        dg.add_edge(parent, child)
+
+    print("\nPaste your script below. Finish input with three empty lines (press ENTER three times):")
+    script_lines = []
+    empty = 0
+    while True:
+        try:
+            ln = input()
+        except EOFError:
+            break
+        if not ln.strip():
+            empty += 1
+            if empty >= 3:
+                break
+            continue
+        empty = 0
+        script_lines.append(ln)
+
+    # Process each apt install line individually
+    install_lines = extract_apt_install_lines(script_lines)
+    if not install_lines:
+        print("\n\033[1;33mNo apt install lines detected.\033[0m")
+        return
+
+    for il in install_lines:
+        print(f"\n\033[1;34mAnalyzing:\033[0m {il}")
+        pkgs = dryrun_pkgs(il)
+        if not pkgs:
+            print("  (No packages detected.)\n")
+            continue
+        dg.fill_current(pkgs)
+        print(dg.cluster_matches_and_libstring())
+        dg.transfer_current_to_accum()
+
+    print(f"\033[1;32mFinal libstring from all dry runs:\033[0m")
+    dg.swap_current_and_accumulator()
+    print(dg.cluster_matches_and_libstring(header="Final libstring"))
+
+if __name__ == '__main__':
+    main()
+EOF
+do sleep 1; done
+
+# Ensure libcheck is executable
+sudo chmod +x /usr/bin/h20-libcheck
+</pre>
+        </div>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Setting Up The Deterministic Password Generator: Part 1.</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            We'll now set up the qube for deterministic password generation.
+        </p>
+        <p>
+            The following code opens a terminal with appropriate permissions.
+        </p>
+        <div class="bash-script-box">
+            <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# ==================== # You can use SHIFT+INSERT to paste into
+#     dom0 > xterm     # xterm, or use the middle mouse button.
+# ==================== #
+
+# Open a terminal as the root user
+qvm-run -u root dXX-crypt-passgen xterm
+</pre>
+        </div>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Setting Up The Deterministic Password Generator: Part 2.</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            Now navigate to the Github page for Yianni-Mitropoulos/h20-pass. Click the file <code>install-debian.sh</code>, and copy the code into <code>dXX-crypt-passgen</code>.
+        </p>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Creating AppVMs</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+            </div>
+        </div>
+        <p>
+            Ensure all your templates are shutdown. Now create the following AppVMs using the Create New Qube utility. Ensure they have no internet access, and set the default disposable to None for all of them.
+        </p>
+        <ul>
+            <li><code>crypt-libcheck-dvm</code> (For checking libraries and dependencies)</li>
+            <li><code>crypt-passgen-dvm </code> (For generating passwords)</li>
+            <li><code>crypt-files       </code> (For storing your files)</li>
+        </ul>
+    </div>
+    </div>
+    <script src="scripts.js"></script>
+</body>
+</html>

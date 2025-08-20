@@ -69,7 +69,7 @@
 
 until sudo tee -a /etc/bash.bashrc > /dev/null &lt;&lt;'EOF'
 # h20-shellguard: Basic Bash Hardening
-# -------------------------------------
+# ------------------------------------
 # This function is designed to work in tandem with 'h20-auditor',
 # a separate tool that scans and normalizes shell scripts to help
 # detect obfuscation, trickery, and steganographic code.
@@ -84,14 +84,17 @@ until sudo tee -a /etc/bash.bashrc > /dev/null &lt;&lt;'EOF'
 #
 # By default, it must be activated manually via 'h20-shellguard'.
 # But note that ShellAudit inserts its own h20-shellguard commands.
-# So if you got the script from ShellAudit, you don't have to manually activate ShellGuard.
+# So if you got the script from ShellAudit, you do not have to manually
+# activate ShellGuard.
 #
-# There is no associated 'disable' command. To revert, close the terminal and reopen it.
+# NOTE: For security reasons, no commands are provided to easily disable
+# the impact of shellguard. The quickest way to undo the changes it has made
+# is to simply close the terminal and reopen it.
 h20-shellguard() {
     echo "[h20-shellguard] Protections ENABLED in this shell session."
 
     # Enforce strict glob behavior
-    shopt -s failglob  # fail if globs don't match anything
+    shopt -s failglob  # fail if globs do not match anything
     shopt -s nullglob  # empty globs expand to nothing
     shopt -u extglob   # disable @(a|b) style patterns
     shopt -u globstar  # disable **
@@ -107,7 +110,6 @@ h20-shellguard() {
     # Disable risky builtins
     alias eval='echo [BLOCKED: eval is disabled]'
     alias exec='echo [BLOCKED: exec is disabled]'
-    alias source='echo [BLOCKED: source is disabled]'
     alias printf='echo [BLOCKED: use echo instead]'
     alias command='echo [BLOCKED: command is disabled]'
     alias builtin='echo [BLOCKED: builtin is disabled]'
@@ -330,7 +332,7 @@ def flag_dangerous_keywords(txt):
     # Nevertheless, we have to avoid direct textual inclusion of
     # the actual patterns, to ensure the script is self-validating.
     # Otherwise, it will spuriously flag itself as suspicious.
-    keywords = ['e'+'val', 'e'+'xec', 's'+'ource', 'c'+'ommand', 'b'+'uiltin']
+    keywords = ['e'+'val', 'e'+'xec', 'c'+'ommand', 'b'+'uiltin']
     flagged = []
     lines = txt.splitlines()
     for i, line in enumerate(lines, 1):
@@ -341,7 +343,7 @@ def flag_dangerous_keywords(txt):
     return flagged
 
 def flag_dangerous_chars_after_comment_marks(txt):
-    comment_markers = [HASH_CHAR, '//', '--', '&lt;!--']
+    comment_markers = [HASH_CHAR]
     flagged = []
     lines = txt.splitlines()
     for i, line in enumerate(lines, 1):

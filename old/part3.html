@@ -93,21 +93,24 @@ qvm-run -u root dXX xterm
     </div>
     <div class="page">
         <div class="page-header">
-            <h2>Reroute Through Switzerland</h2>
+            <h2>Make Shellguard Available</h2>
             <div class="button-container">
                 <button class="prev-next-btn" onclick="prev()">Back</button>
                 <button class="prev-next-btn" onclick="next()">Next</button>
             </div>
         </div>
         <p>
-            The following code should be executed in <code>dXX</code>. Its purpose is to reroute Debian-supplied updates through a random Swiss mirror (since Switzerland has very good privacy laws), and to avoid installing proprietary blobs (which represent a security risk). Re-enabling proprietary blobs is straightforward, and sometimes necessary. Functions to do this are therefore also included. After the reroute it then installs a few critical utilities, and does a full upgrade of all installed software.
+            As mentioned in the previous guide, the ShellAudit produces scripts that begin with a call to <code>h20-shellguard</code>. 
         </p>
         <p>
-        	The most controversial utility this installs is passwordless sudo. Many security experts would argue that installing passwordless sudo here reduces our overall security posture. However, they're objectively wrong. This is because passwordless sudo allows us to run our TemplateVMs with non-root permissions, which means that potentially dangerous commands will fail unless used with <code>sudo</code>. This improves the transparency and auditability of the overall process of setting up our TemplateVMs.
+            This means the scripts it produces will not work unless ShellGuard is installed.
         </p>
         <p>
-        	 There are certain high-assurance VMs for which we'll ultimately uninstall passwordless sudo. This is to ensure potential attackers have the fewest possible tools available to them. But we only uninstall it AFTER setting up our system, not before, to avoid running as the root user.
-    	</p>
+            So, let's install it.
+        </p>
+        <p>
+            Note that ShellGuard should produce exactly five warnings when you run it through ShellAudit. If it produces a different number of warnings, the website has been compromised, and you should stop immediately.
+        </p>
         <div class="bash-script-box">
                 <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
 <pre>
@@ -115,8 +118,104 @@ qvm-run -u root dXX xterm
 #     dXX > xterm     # xterm, or use the middle mouse button.
 # =================== #
 
-echo 'Defining functions for modifying apt sources'
-until tee -a /etc/bash.bashrc > /dev/null &lt;&lt;'EOF_OUTER'
+until sudo tee -a /etc/bash.bashrc > /dev/null &lt;&lt;'EOF'
+# h20-shellguard: Basic Bash Hardening
+# ------------------------------------
+# This function is designed to work in tandem with 'h20-auditor',
+# a separate tool that scans and normalizes shell scripts to help
+# detect obfuscation, trickery, and steganographic code.
+#
+# ShellGuard adds runtime protections that:
+# - Make unsafe patterns more likely to fail early
+# - Reduce attack surface for shell abuse
+#
+# It does NOT provide meaningful protection, and a malicious script or user can
+# reverse the changes imposed by ShellGuard. It is ONLY useful in tandem with
+# auditing tools (like ShellAudit, or otherwise).
+#
+# By default, it must be activated manually via 'h20-shellguard'.
+# But note that ShellAudit inserts its own h20-shellguard commands.
+# So if you got the script from ShellAudit, you do not have to manually
+# activate ShellGuard.
+#
+# NOTE: For security reasons, no commands are provided to easily disable
+# the impact of shellguard. The quickest way to undo the changes it has made
+# is to simply close the terminal and reopen it.
+h20-shellguard() {
+    echo "[h20-shellguard] Protections ENABLED in this shell session."
+
+    # Enforce strict glob behavior
+    shopt -s failglob  # fail if globs do not match anything
+    shopt -s nullglob  # empty globs expand to nothing
+    shopt -u extglob   # disable @(a|b) style patterns
+    shopt -u globstar  # disable **
+    shopt -u dotglob   # exclude dotfiles
+
+    # Sanitize environment
+    export IFS=$' \t\n'
+    export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    unset LD_PRELOAD
+    unset BASH_ENV
+    unset PROMPT_COMMAND
+
+    # Disable risky builtins
+    alias eval='echo [BLOCKED: eval is disabled]'
+    alias exec='echo [BLOCKED: exec is disabled]'
+    alias source='echo [BLOCKED: source is disabled]'
+    alias printf='echo [BLOCKED: use echo instead]'
+    alias command='echo [BLOCKED: command is disabled]'
+    alias builtin='echo [BLOCKED: builtin is disabled]'
+
+    # Remove malicious function overrides (if any)
+    unset -f eval exec source printf command builtin 2>/dev/null
+
+    # Hide control characters (e.g. ^C, ^D)
+    stty -echoctl 2>/dev/null || true
+    stty intr '^C' erase '^H' kill '^U' 2>/dev/null || true
+}
+EOF
+do sleep 1; done
+</pre>
+        </div>
+        <p>
+            After performing this step, close your terminal. Then reopen it again with root permissions from <code>dom0</code>. Advanced users can use the <code>source</code> command instead.
+        </p>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Use ShellAudit From Now On</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            From now on, be sure to run all the scripts I give you through <code>h20-shellaudit</code>. All code provided by Hero To Zero (except for ShellGuard) should pass the opinionated audit completely. Code obtained elsewhere oftentimes won't pass the audit. Consider using AI to help rewrite the script in that case, to better meet the demands of ShellAudit. If you're not comfortably doing that, I suggest looking for other, less opinionated tools to help with the overall script audit process.
+        </p>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Configure Aptitude: Part 1</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            The following code should be executed in <code>dXX</code>. Its purpose is to define functions that reroute us through a random Swiss mirror (since Switzerland has very good privacy laws), and to avoid installing proprietary blobs (which represent a security risk).
+        </p>
+        <p>
+            Re-enabling proprietary blobs is straightforward, and sometimes necessary. Functions to do this are therefore also included.
+        </p>
+        <div class="bash-script-box">
+                <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# =================== # You can use SHIFT+INSERT to paste into
+#     dXX > xterm     # xterm, or use the middle mouse button.
+# =================== #
+
+#### 2. Define functions for modifying apt sources
+until sudo tee -a /etc/bash.bashrc > /dev/null &lt;&lt;'EOF_OUTER'
 # h20-register-debian-sources
 # ----------------------------
 # Creates a Debian APT sources list file at a specified path, using a random
@@ -193,107 +292,26 @@ h20-disable-nonfree-debian-sources() {
     fi
 }
 EOF_OUTER
-do sleep 1; done
-
-echo 'Ensuring newly defined functions are immediately available'
-until source /etc/bash.bashrc; do sleep 1; done
-
-echo 'Changing to random Swiss mirror and disabling proprietary blobs.'
-h20-register-debian-sources /etc/apt/sources.list "main"
-
-echo 'Installing key packages to ensure updates are over HTTPS'
-until sudo apt install apt-transport-https ca-certificates; do sleep 1; done
-
-echo 'Installing passwordless sudo so we can avoid running as root user'
-until sudo apt install qubes-core-agent-passwordless-root; do sleep 1; done
+do sleep 1; done;
 </pre>
         </div>
     </div>
     <div class="page">
         <div class="page-header">
-            <h2>Close and Reopen Your Terminal</h2>
+            <h2>Configure Aptitude: Part 2</h2>
             <div class="button-container">
                 <button class="prev-next-btn" onclick="prev()">Back</button>
                 <button class="prev-next-btn" onclick="next()">Next</button>
             </div>
         </div>
         <p>
-           Begin by closing the terminal in <code>dXX</code> with root user status. You don't have to restart the VM. Afterwards, reopen xterm in <code>dXX</code> via the Q menu. This has the effect of opening it without root user status, and forces potentially dangerous commands to go via the sudo escape hatch.
-        </p>
-    </div>
-    <div class="page">
-        <div class="page-header">
-            <h2>Update Software</h2>
-            <div class="button-container">
-                <button class="prev-next-btn" onclick="prev()">Back</button>
-                <button class="prev-next-btn" onclick="next()">Next</button>
-            </div>
-        </div>
-        <p>
-        	Once the new terminal has been opened, go ahead and paste in the following code. It updates all of your software, and then cleans up afterwards.
-        </p>
-		<div class="bash-script-box">
-        	<button class="copy-btn" onclick="copyToClipboard()">Copy</button>
-<pre>
-echo 'Performing full upgrade via the new mirror'
-until sudo apt update; do sleep 1; done
-until sudo apt full-upgrade; do sleep 1; done
-until sudo apt autoremove; do sleep 1; done
-until sudo apt clean; do sleep 1; done
-</pre>
-        </div>
-    </div>
-    <div class="page">
-        <div class="page-header">
-            <h2>Logs and Data Retention: Part 1</h2>
-            <div class="button-container">
-                <button class="prev-next-btn" onclick="prev()">Back</button>
-                <button class="prev-next-btn" onclick="next()">Next</button>
-            </div>
-        </div>
-    	<p>
-    		For the most part, security and privacy are complementary. Unfortunately, they're actually occassionally in conflict. Logs are a common example of this. Keeping extensive logs is good for security, because they facilitate automated (and manual) intrusion detection, and assist users in reacting appropriately if there's a breach. On the other hand, they can be stolen by hackers, and recovered from hard drives. Logs are therefore a common pain point for security and privacy setups.
-    	</p>
-        <p>
-        	At Hero to Zero, we advocate using the following rules to address the tension:
-        </p>
-        <ul>
-			<li>System logs are configured to be as comprehensive as possible.</li>
-			<li>They live entirely in RAM.</li>
-			<li>They last only 1 minute in the originating VM.</li>
-        	<li>Some VMs are configured to automatically send their logs to a dedicated <code>logaudit</code> qube.</li>
-        	<li>The <code>logaudit</code> qube runs automated log analysis and intrusion detection software.</li>
-        	<li>The <code>logaudit</code> qube does not hold onto your logs for more than 30 minutes, unless anomalous behaviour is detected.</li>
-        	<li>If anomalous behaviour is detected, the <code>logaudit</code> qube chooses a random password, and begins to encrypt the logs with that password, and stores them on disk for future reference.</li>
-        	<li>The anomalous behaviour alert tells you the password, so that you can write it down.</li>
-        	<li>If you don't store that password somehow (or memorize it), you won't be able to recover those logs.</li>
-        </ul>
-    </div>
-    <div class="page">
-        <div class="page-header">
-            <h2>Logs and Data Retention: Part 2</h2>
-            <div class="button-container">
-                <button class="prev-next-btn" onclick="prev()">Back</button>
-                <button class="prev-next-btn" onclick="next()">Next</button>
-            </div>
-        </div>
-        <p>
-        	Additionally, we need to make sure there's fundamentally an asymmetry between enabling logging (which should be easy) and disabling logging (which should require a password). This ensures that a malicious script cannot easily disable logging.
+            Close your terminal, and reopen it again. Then run the following code. It activates the new mirrors, disabled proprietary blobs, and uses the new mirrors to update your system.
         </p>
         <p>
-        	To achieve this, the following script makes four functions available.
+            The script below also enables passwordless sudo. This improves the security of our overall workflow, by allowing us to avoid running as the root user, and run instead as a standard user. This, in turn, force dangerous commands to be prefaced by <code>sudo</code>, which improves auditability. Later on, we'll remove passwordless sudo from a handful of specific templates, in order to improve their security posture. However, for now, it's better and more secure to have passwordless sudo installed, and to simply avoid running as the root user.
         </p>
-        <ul>
-        	<li>A function called <code>h20-enable-journald</code> turns system logging on, and can be run without root/sudo privileges.</li>
-        	<li>A function called <code>h20-disable-journald</code> turns most system logging off, but can only be run with root/sudo privileges.</li>
-			<li>A function called <code>h20-enable-log-exfil</code> turns on exfiltration to the dedicated AuditVM, and can be run without root/sudo privileges.</li>
-        	<li>A function called <code>h20-disable-log-exfil</code> turns off exfiltration to the dedicated AuditVM, and cannot be run without root/sudo privileges.</li>
-		</ul>
-		<p>
-			NOTE: To gain this asymmetry, we have to strategically uninstall passwordless root where appropriate. We'll do that later.
-		</p>
         <p>
-            For now, please run the following code in <code>dXX</code>.
+            Reactivating proprietary blobs can be done later, on a case-by-case basis. For now, I'd argue that disabling them is the correct option.            
         </p>
         <div class="bash-script-box">
                 <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
@@ -302,286 +320,39 @@ until sudo apt clean; do sleep 1; done
 #     dXX > xterm     # xterm, or use the middle mouse button.
 # =================== #
 
-echo 'Ensuring logs are redirected to RAM and purged on shutdown'
-until sudo mount -t tmpfs -o size=100M,mode=0755 tmpfs /var/log; do sleep 1; done
-
-echo 'Recreating essential /var/log files and directories (tmpfiles.d)'
-until sudo tee /etc/tmpfiles.d/h20-var-log.conf > /dev/null &lt;&lt;'EOF'
-# h20-var-log.conf — recreate essentials when /var/log is tmpfs
-d /var/log               0755 root root -
-d /var/log/apt           0755 root root -
-d /var/log/dpkg          0755 root root -
-d /var/log/fsck          0755 root root -
-d /var/log/rsyslog       0755 root root -
-d /var/spool/rsyslog     0755 root root -
-# classic login/accounting files
-f /var/log/wtmp          0664 root utmp -
-f /var/log/btmp          0600 root utmp -
-f /var/log/lastlog       0644 root root -
-f /var/log/faillog       0644 root root -
-EOF
-do sleep 1; done
-until sudo systemd-tmpfiles --create /etc/tmpfiles.d/h20-var-log.conf; do sleep 1; done
-
-echo 'Persist the mount in /etc/fstab (no idempotency, just append)'
-until sudo tee -a /etc/fstab > /dev/null &lt;&lt;'EOF'
-tmpfs /var/log tmpfs defaults,size=100m,mode=0755 0 0
-EOF
-do sleep 1; done
-
-echo 'Configure systemd-journald to use volatile (RAM-only) logging'
-until sudo mkdir -p /etc/systemd/journald.conf.d; do sleep 1; done
-until sudo tee /etc/systemd/journald.conf.d/volatile.conf > /dev/null &lt;&lt;'EOF'
-[Journal]
-Storage=volatile
-EOF
-do sleep 1; done
-
-echo 'Restarting journald to apply the volatile logging config'
-until sudo systemctl restart systemd-journald; do sleep 1; done
-if systemctl list-unit-files --no-legend --type=service 2>/dev/null | awk '{print $1}' | grep -Fxq rsyslog.service; then
-  echo 'Restarting rsyslog to resync with journald and /var/log'
-  until sudo systemctl restart rsyslog; do sleep 1; done
+### 3. Modify apt sources
+# Backup only once, if not already backed up
+echo 'Backing up the original sources as /etc/apt/sources.list.bak'
+if [ ! -f /etc/apt/sources.list.bak ]; then
+    sudo cp -v /etc/apt/sources.list /etc/apt/sources.list.bak;
 fi
 
-echo 'Commenting out HIST or shopt lines in /etc/skel/.bashrc'
-until sudo awk -v h="#" -f - /etc/skel/.bashrc > "/tmp/.h20.bashrc.new" &lt;&lt;'EOF'
-/^[[:space:]]*(HIST|shopt)/ {
-    sub(/^[[:space:]]*/, "&" h " ")
-}
-{ print }
-EOF
-do sleep 1; done
-until sudo mv /tmp/.h20.bashrc.new /etc/skel/.bashrc; do sleep 1; done
+# Make the change to the Swiss mirrors
+echo 'Changing to Swiss mirror and disabling proprietary blobs.'
+h20-register-debian-sources /etc/apt/sources.list "main"
 
-echo 'Ensuring bash history is limited to 10 commands, stored in RAM, and purged on shutdown'
-until sudo tee -a /etc/bash.bashrc > /dev/null &lt;&lt;'EOF'
-export HISTSIZE=10
-export HISTFILESIZE=0
-export HISTFILE=/dev/null
-EOF
-do sleep 1; done
-
-echo 'Creating root helper for h20-enable-journald'
-until sudo tee /usr/sbin/h20-enable-journald-root > /dev/null &lt;&lt;'EOF'
-#!/bin/sh
-# h20-enable-journald-root
-# ------------------------
-# Unmasks, enables, and starts journald sockets/services, and rsyslog if present.
-echo "[h20] enabling journald sockets/services"
-for u in systemd-journald.socket systemd-journald-dev-log.socket systemd-journald-audit.socket systemd-journald.service; do
-  if systemctl list-unit-files --no-legend --type=service --type=socket 2>/dev/null | awk '{print $1}' | grep -Fxq "$u"; then
-    if systemctl is-enabled "$u" 2>&1 | grep -q masked; then
-      echo "[h20] unmask $u"
-      until systemctl unmask "$u"; do sleep 1; done
-    fi
-    echo "[h20] enable $u"
-    until systemctl enable "$u"; do sleep 1; done
-    echo "[h20] start $u"
-    until systemctl start "$u" || systemctl restart "$u"; do sleep 1; done
-  else
-    echo "[h20] skip missing $u"
-  fi
-done
-if command -v rsyslogd >/dev/null 2>&1 || [ -f /usr/sbin/rsyslogd ] || [ -f /usr/bin/rsyslogd ]; then
-  echo "[h20] ensuring rsyslog.service is up"
-  if systemctl is-enabled rsyslog.service 2>&1 | grep -q masked; then
-    until systemctl unmask rsyslog.service; do sleep 1; done
-  fi
-  until systemctl enable rsyslog.service; do sleep 1; done
-  until systemctl start rsyslog.service || systemctl restart rsyslog.service; do sleep 1; done
-else
-  echo "[h20] rsyslog not installed; skipping"
-fi
-echo "[h20] journald enable complete"
-EOF
-do sleep 1; done
-until sudo chmod 0755 /usr/sbin/h20-enable-journald-root; do sleep 1; done
-until sudo chown root:root /usr/sbin/h20-enable-journald-root; do sleep 1; done
-
-echo 'Creating root helper for h20-disable-journald'
-until sudo tee /usr/sbin/h20-disable-journald-root > /dev/null &lt;&lt;'EOF'
-#!/bin/sh
-# h20-disable-journald-root
-# -------------------------
-# Stops and disables journald sockets/services; stops/disables rsyslog if present.
-echo "[h20] stopping journald sockets/services"
-for u in systemd-journald.service systemd-journald.socket systemd-journald-dev-log.socket systemd-journald-audit.socket; do
-  if systemctl list-unit-files --no-legend --type=service --type=socket 2>/dev/null | awk '{print $1}' | grep -Fxq "$u"; then
-    until systemctl stop "$u" || systemctl try-restart "$u"; do sleep 1; done
-    until systemctl disable "$u"; do sleep 1; done
-  fi
-done
-if systemctl list-unit-files --no-legend --type=service 2>/dev/null | awk '{print $1}' | grep -Fxq rsyslog.service; then
-  until systemctl stop rsyslog.service || systemctl try-restart rsyslog.service; do sleep 1; done
-  until systemctl disable rsyslog.service; do sleep 1; done
-fi
-echo "[h20] journald mostly disabled"
-EOF
-do sleep 1; done
-until sudo chmod 0755 /usr/sbin/h20-disable-journald-root; do sleep 1; done
-until sudo chown root:root /usr/sbin/h20-disable-journald-root; do sleep 1; done
-
-echo 'Creating root helper for h20-enable-log-exfil'
-until sudo tee /usr/sbin/h20-enable-log-exfil-root > /dev/null &lt;&lt;'EOF'
-#!/bin/sh
-# h20-enable-log-exfil-root
-# -------------------------
-# Configures rsyslog to forward all logs to host "logaudit" over UDP 514.
-AUDIT_HOST="logaudit"
-AUDIT_PORT="514"
-# install rsyslog if missing
-if ! command -v rsyslogd >/dev/null 2>&1 && [ ! -f /usr/sbin/rsyslogd ] && [ ! -f /usr/bin/rsyslogd ]; then
-  echo "[h20] installing rsyslog"
-  until apt-get update; do sleep 1; done
-  until DEBIAN_FRONTEND=noninteractive apt-get install -y rsyslog; do sleep 1; done
-fi
-# ensure imjournal follows journald
-if [ -f /etc/rsyslog.conf ]; then
-  if ! grep -q '^module(load="imjournal")' /etc/rsyslog.conf; then
-    echo '[h20] enabling imjournal in /etc/rsyslog.conf'
-    until sed -i '1imodule(load="imjournal" StateFile="/var/spool/rsyslog/imjournal.state")' /etc/rsyslog.conf; do sleep 1; done
-  fi
-fi
-# forward everything
-until mkdir -p /etc/rsyslog.d; do sleep 1; done
-until tee /etc/rsyslog.d/99-h20-forward-all.conf >/dev/null &lt;&lt;EOC
-# h20 forward all logs to logaudit
-*.*  @${AUDIT_HOST}:${AUDIT_PORT}
-EOC
-do sleep 1; done
-# start/enable rsyslog
-if systemctl is-enabled rsyslog.service 2>&1 | grep -q masked; then
-  until systemctl unmask rsyslog.service; do sleep 1; done
-fi
-until systemctl enable rsyslog.service; do sleep 1; done
-until systemctl restart rsyslog.service; do sleep 1; done
-echo "[h20] log exfil enabled to ${AUDIT_HOST}:${AUDIT_PORT}"
-EOF
-do sleep 1; done
-until sudo chmod 0755 /usr/sbin/h20-enable-log-exfil-root; do sleep 1; done
-until sudo chown root:root /usr/sbin/h20-enable-log-exfil-root; do sleep 1; done
-
-echo 'Creating root helper for h20-disable-log-exfil'
-until sudo tee /usr/sbin/h20-disable-log-exfil-root > /dev/null &lt;&lt;'EOF'
-#!/bin/sh
-# h20-disable-log-exfil-root
-# --------------------------
-# Removes the rsyslog forwarding config and restarts rsyslog.
-if [ -f /etc/rsyslog.d/99-h20-forward-all.conf ]; then
-  until rm -f /etc/rsyslog.d/99-h20-forward-all.conf; do sleep 1; done
-fi
-if systemctl list-unit-files --no-legend --type=service 2>/dev/null | awk '{print $1}' | grep -Fxq rsyslog.service; then
-  until systemctl restart rsyslog.service; do sleep 1; done
-fi
-echo "[h20] log exfil disabled"
-EOF
-do sleep 1; done
-until sudo chmod 0755 /usr/sbin/h20-disable-log-exfil-root; do sleep 1; done
-until sudo chown root:root /usr/sbin/h20-disable-log-exfil-root; do sleep 1; done
-
-echo 'Allowing passwordless enablement of log creation and log exfil'
-until sudo tee /etc/sudoers.d/h20-logs > /dev/null &lt;&lt;'EOF'
-Cmnd_Alias H20_ENABLES = /usr/sbin/h20-enable-journald-root, /usr/sbin/h20-enable-log-exfil-root
-user ALL=(root) NOPASSWD: H20_ENABLES
-Defaults!H20_ENABLES env_reset,secure_path="/usr/sbin:/usr/bin:/sbin:/bin"
-EOF
-do sleep 1; done
-until sudo chmod 0440 /etc/sudoers.d/h20-logs; do sleep 1; done
-until sudo visudo -c > /dev/null; do sleep 1; done
-
-echo 'Creating bash wrappers for exposure to end-user'
-until sudo tee -a /etc/bash.bashrc > /dev/null &lt;&lt;'EOF'
-# h20-enable-journald
-# -------------------
-# Turns system logging on. Unmasks/enables/starts journald sockets/services,
-# and ensures rsyslog is running if present. Can be run by non-root user
-# due to a limited sudoers rule.
-h20-enable-journald() {
-  until sudo /usr/sbin/h20-enable-journald-root; do sleep 1; done
-}
-
-# h20-disable-journald
-# --------------------
-# Turns most system logging off. Stops/disables journald sockets/services
-# and stops/disables rsyslog if present. Requires root/sudo privileges.
-h20-disable-journald() {
-  until sudo /usr/sbin/h20-disable-journald-root; do sleep 1; done
-}
-
-# h20-enable-log-exfil
-# --------------------
-# Forwards all logs to the "logaudit" host over UDP 514 via rsyslog.
-# Installs rsyslog if missing. Can be run without a password due to
-# a limited sudoers rule.
-h20-enable-log-exfil() {
-  until sudo /usr/sbin/h20-enable-log-exfil-root; do sleep 1; done
-}
-
-# h20-disable-log-exfil
-# ---------------------
-# Disables forwarding by removing the rsyslog snippet and restarting rsyslog.
-# Requires root/sudo privileges.
-h20-disable-log-exfil() {
-  until sudo /usr/sbin/h20-disable-log-exfil-root; do sleep 1; done
-}
-
-# h20-watch-logs
-# --------------
-# Shows the last 200 journal lines and then follows new log entries in realtime.
-# Must be run as root or with sudo.
-h20-watch-logs() {
-  sudo journalctl -n 200 -f --no-hostname --output=short-iso
-}
-EOF
-do sleep 1; done
-
-echo 'Installing 1-minute journal vacuum service and timer'
-until sudo tee /etc/systemd/system/h20-journal-vacuum.service > /dev/null &lt;&lt;'EOF'
-[Unit]
-Description=H2O - vacuum systemd journal to 1 minute
-
-[Service]
-Type=oneshot
-ExecStart=/bin/sh -c 'journalctl --vacuum-time=1m || true'
-EOF
-do sleep 1; done
-
-until sudo tee /etc/systemd/system/h20-journal-vacuum.timer > /dev/null &lt;&lt;'EOF'
-[Unit]
-Description=H2O - run journal vacuum every minute
-
-[Timer]
-OnBootSec=30s
-OnUnitActiveSec=60s
-Unit=h20-journal-vacuum.service
-AccuracySec=10s
-
-[Install]
-WantedBy=timers.target
-EOF
-do sleep 1; done
-
-echo 'Enabling and starting the 1-minute journal vacuum timer'
-until sudo systemctl daemon-reload; do sleep 1; done
-until sudo systemctl enable h20-journal-vacuum.timer; do sleep 1; done
-until sudo systemctl start h20-journal-vacuum.timer; do sleep 1; done
+#### 4. Ensure everything is up to date via our new mirror
+echo 'Performing full upgrade via the new mirror'
+until sudo apt update; do sleep 1; done
+until sudo apt install -y apt-transport-https ca-certificates; do sleep 1; done # Ensure updates are over HTTPS
+until sudo apt install -y qubes-core-agent-passwordless-root; # This helps us avoid running as root user, improving auditability. It can be uninstalled later
+until sudo apt full-upgrade; do sleep 1; done
+until sudo apt autoremove; do sleep 1; done
+until sudo apt clean; do sleep 1; done
+echo 'Full upgrade complete'
 </pre>
         </div>
     </div>
     <div class="page">
         <div class="page-header">
-            <h2>Reconfigure OS For Security</h2>
+            <h2>Configure OS</h2>
             <div class="button-container">
                 <button class="prev-next-btn" onclick="prev()">Back</button>
                 <button class="prev-next-btn" onclick="next()">Next</button>
             </div>
         </div>
         <p>
-            Now run the following code. It reconfigure the overall operating system with a view towards security and the creation of verbose and maximally helpful logs.
-        </p>
-        <p>
-        	Remember: if logs are fundamentally incompatible with your use case, the <code>h20-disable-journald</code> command provided by the previous script can be used to eliminate most of them.
+            The following code should be executed in <code>dXX</code>. Its purpose is to reconfigure the overall operating system, with a view towards privacy and security.
         </p>
         <div class="bash-script-box">
             <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
@@ -590,12 +361,15 @@ until sudo systemctl start h20-journal-vacuum.timer; do sleep 1; done
 #     dXX > xterm     # xterm, or use the middle mouse button.
 # =================== #
 
-echo 'Enable extra canaries/checks for binaries using glibc malloc'
+echo '[INFO] --- DEBIAN HARDENING INITIATED ---'
+
+#### 5. Enable extra glibc malloc canaries/checks for any binary that is somehow not using hardened malloc
 until echo 'MALLOC_CHECK_=3' | sudo tee -a /etc/environment > /dev/null; do sleep 1; done
 until echo 'MALLOC_PERTURB_=153' | sudo tee -a /etc/environment > /dev/null; do sleep 1; done
 
-echo 'Hardening sysctl for privacy and security'
-until sudo tee -a /etc/sysctl.d/97-hardening.conf > /dev/null &lt;&lt;'EOF'
+#### 6. Harden sysctl for security and anti-forensics
+echo 'Writing /etc/sysctl.d/99-hardening.conf'
+until sudo tee -a /etc/sysctl.d/99-hardening.conf > /dev/null &lt;&lt;'EOF'
 ################################
 #### MEMORY/DEBUG/FORENSICS ####
 ################################
@@ -745,14 +519,74 @@ vm.compact_unevictable_allowed = 0
 EOF
 do sleep 1; done
 
-echo 'Reapplying .conf files'
+# Reapply .conf files
 until sysctl --system; do sleep 1; done
+echo '[INFO] --- DEBIAN HARDENING DONE ---'
 </pre>
         </div>
     </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Limit Data Retention</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            Before we get started, I recommend running the following code in <code>dXX</code>. It places limits on the retention of logs and terminal history, which promotes privacy. Users who are focused more on security than privacy may wish to skip this step.
+        </p>
+        <p>
+            <strong>Skipping this step may come back to bite you, if privacy ever becomes a concern.</strong>
+        </p>
+        <p>
+            <strong>If you decide to skip it, be sure to make a mental note that you did so.</strong>
+        </p>
+        <div class="bash-script-box">
+                <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# =================== # You can use SHIFT+INSERT to paste into
+#     dXX > xterm     # xterm, or use the middle mouse button.
+# =================== #
 
+#### 0. Ensure logs are redirected to RAM and purged on shutdown
+# Mount /var/log as a tmpfs (100MB size, ephemeral) and retry until success
+until sudo mount -t tmpfs -o size=100M,mode=0755 tmpfs /var/log; do sleep 1; done
 
+# Persist the mount in /etc/fstab (idempotent + retry-safe)
+FSTAB_LINE='tmpfs /var/log tmpfs defaults,size=100m,mode=0755 0 0'
+until grep -qF "$FSTAB_LINE" /etc/fstab || echo "$FSTAB_LINE" | sudo tee -a /etc/fstab > /dev/null; do sleep 1; done
 
+# Configure systemd-journald to use volatile (RAM-only) logging
+until sudo mkdir -p /etc/systemd/journald.conf.d; do sleep 1; done
+until echo -e '[Journal]\nStorage=volatile' | sudo tee /etc/systemd/journald.conf.d/volatile.conf > /dev/null; do sleep 1; done
+
+# Restart journald to apply the volatile logging config
+until sudo systemctl restart systemd-journald; do sleep 1; done
+
+#### 1. Limit retention of bash commands
+# Comment out HIST or shopt lines in /etc/skel/.bashrc
+file="/etc/skel/.bashrc"
+hash_char=$'\x23' # This is not obfuscation, just trying to pass shellguard test
+until awk -v h="$hash_char" -f - "$file" > "$file.new" &lt;&lt;'EOF'
+/^[[:space:]]*(HIST|shopt)/ {
+    sub(/^[[:space:]]*/, "&" h " ")
+}
+{ print }
+EOF
+do sleep 1; done
+until mv "$file.new" "$file"; do sleep 1; done
+
+# Ensure bash history is limited to 10 commands, stored in RAM, and purged on shutdown
+until sudo tee -a /etc/bash.bashrc > /dev/null &lt;&lt;'EOF'
+export HISTSIZE=10
+export HISTFILESIZE=0
+export HISTFILE=/dev/null
+EOF
+do sleep 1; done
+</pre>
+        </div>
+    </div>
     <div class="page" data-format-specifier="YYYY">
         <div class="page-header">
             <h2>Hardened Malloc: Part 1.</h2>

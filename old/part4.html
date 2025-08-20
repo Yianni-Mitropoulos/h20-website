@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A Trinity of Templates</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="page" data-format-specifier="XX">
+        <div class="page-header">
+            <h2>Choose Debian Version</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>What version of Debian are you targeting?</p>
+        <input type="text" id="XX" placeholder="Enter the version of Debian you're using.">
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Create Clones</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            Before starting, ensure the dXX qube is not running (it's not enough to exit the dXX terminal).
+        </p>
+        <p>
+            Now create the following TemplateVM's by cloning dXX (recommended color: black).
+        </p>
+        <ul>
+            <li><code>dXX-inet</code>   (For applications that need internet access)</li>
+            <li><code>dXX-studio</code> (For applications that do not need network access of any kind)</li>
+        </ul>
+        <p>
+            If you're not sure how to do this, here are the steps:
+        </p>
+        <ul>
+            <li>Click the Q menu and type 'cr'.</li>
+            <li>Click 'Create New Qube'.</li>
+            <li>Select <strong>Template</strong> in the left panel.</li>
+            <li>Enter a qube name of dXX-inet (or dXX-studio, the second time you do this).</li>
+            <li>Choose a color of 'Black' (this is just a recommendation).</li>
+            <li>Change 'Do not clone' to 'Template: dXX'.</li>
+            <li>Press Create.</li>
+        </ul>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Completing the Network Stack: Part 1.</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            We'll now complete the network stack in <code>dXX-inet</code>, as it's currently missing a crucial Qubes-specific library.
+        </p>
+        <p>
+            The following code opens a terminal with appropriate permissions.
+        </p>
+        <div class="bash-script-box">
+            <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# ==================== # You can use SHIFT+INSERT to paste into
+#     dom0 > xterm     # xterm, or use the middle mouse button.
+# ==================== #
+
+# Open a terminal as the root user
+qvm-run -u root dXX-inet xterm
+</pre>
+        </div>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Completing the Network Stack: Part 2.</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            Inside dXX-inet, run the following code. It installs the software needed for networking.
+        </p>
+        <p>
+            Remember: this step should be performed in the dXX-inet template. If you're unsure of which VM a terminal belongs to, check the title of the window.
+        </p>
+        <div class="bash-script-box">
+            <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# ======================= # You can use SHIFT+INSERT to paste into
+#     dXX-inet > xterm    # xterm, or use the middle mouse button.
+# ======================= #
+
+# Enable networking
+echo "Enabling QubesOS-style networking..."
+until sudo apt update; do sleep 1; done
+until sudo apt install qubes-core-agent-networking; do sleep 1; done
+</pre>
+        </div>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Online Template Configured!</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            Nice work! Your template for online activities should be configured correctly at this point.
+        </p>
+        <p>
+            Let us now turn our attention toward offline usage.
+        </p>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Disable Services Inside The Studio: Part 1.</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            It's a good idea to switch off as many Linux services as possible within our "studio" templates. Let's do that now.
+        </p>
+        <p>
+            The following code opens a terminal with appropriate permissions.
+        </p>
+        <div class="bash-script-box">
+            <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# ==================== # You can use SHIFT+INSERT to paste into
+#     dom0 > xterm     # xterm, or use the middle mouse button.
+# ==================== #
+
+# Open a terminal as the root user
+qvm-run -u root dXX-studio xterm
+</pre>
+        </div>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Disable Services Inside The Studio: Part 2.</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            Inside dXX-studio, run the following code. It disables and masks services we don't need. It also sets up a <code>cron</code> job that redisables them every 5 minutes. That way, if you later add new services (e.g. via apt), the cron job will catch the issue and reapply the desired settings.
+        </p>
+        <p>
+            If you're wondering why we don't just outright uninstall them, it's because software that you add will often try to reinstall these services, which undermines the masking. Therefore, it's easier to just leave them installed, and masked.
+        </p>
+        <p>
+            Remember: this step should be performed in the dXX-studio template. If you're unsure of which VM a terminal belongs to, check the title of the window.
+        </p>
+        <div class="bash-script-box">
+            <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# =========================== # You can use SHIFT+INSERT to paste into
+#     dXX-studio > xterm      # xterm, or use the middle mouse button.
+# =========================== #
+
+# Append the service-masking function to /etc/bash.bashrc
+until sudo tee -a /etc/bash.bashrc > /dev/null &lt;&lt;EOF
+# h20-mask-and-disable-the-usual-suspects
+# ------------------------
+# Mask services and sockets
+# For use in offline, high-assurance qubes
+h20-mask-and-disable-the-usual-suspects() {
+  services=(
+    NetworkManager
+    network
+    wicd
+    wpa_supplicant
+    bluetooth
+    rfkill
+    cups
+    cups-browsed
+    pcscd
+    usbguard
+    ModemManager
+    avahi-daemon
+    nfs-client
+    nfs-common
+    smb
+    smbd
+    rpcbind
+    zeroconf
+    nmbd
+    chronyd
+    ntpd
+    systemd-timesyncd
+    sshd
+    telnetd
+    rshd
+    dnsmasq
+    resolvconf
+    dhclient
+    firewalld
+    openvpn
+  )
+  sockets=(
+    NetworkManager
+    avahi-daemon
+    systemd-udevd
+  )
+  # Mask all service units
+  for SERVICE in "${services[@]}"; do
+    sudo systemctl disable "$SERVICE.service" &> /dev/null;
+    sudo systemctl mask "$SERVICE.service" &> /dev/null;
+  done
+  # Mask all socket units
+  for SOCKET in "${sockets[@]}"; do
+      sudo systemctl disable "$SOCKET.socket" &> /dev/null;
+      sudo systemctl mask "$SOCKET.socket" &> /dev/null;
+  done
+  echo "All listed services and sockets have been disabled and masked."
+}
+EOF
+do sleep 1; done
+
+# Make the new function available immediately
+until source /etc/bash.bashrc; do sleep 1; done
+
+# Call the function
+h20-mask-and-disable-the-usual-suspects
+
+# Install cron job to remask services every 5 minutes
+echo "Installing cron job to repeatedly disable and mask common services..."
+CRON_LINE='*/5 * * * * root bash -c "source /etc/bash.bashrc && h20-mask-and-disable-the-usual-suspects"'
+CRON_FILE="/etc/cron.d/h20-remask"
+until echo "$CRON_LINE" | sudo tee "$CRON_FILE" > /dev/null; do sleep 1; done
+sudo chmod 644 "$CRON_FILE"
+echo "Cron job created at $CRON_FILE"
+echo "Every 5 minutes, h20-mask-and-disable-the-usual-suspects will be run automatically."
+echo "This helps catch cases where new services are installed and auto-enabled."
+</pre>
+        </div>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>The Ward</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            For simple things like browsing text files and generating passwords, an even more locked-down template is preferable. We'll now create the template for this, called <code>dXX-ward</code>.
+        </p>
+        <p>
+            The ward is a super minimal template designed to support highly sensitive tasks, like password generation and file management. It can also be used as a place for super-minimal software, even if that software isn't super-sensitive, but note that ordinary software will usually not function properly in the ward, due to the extreme restrictions placed on the behaviour of the operating system.
+        </p>
+        <p>
+            Here's a quick summary of what each template is for:
+        </p>
+        <ul>
+            <li><code>dXX-inet</code>   is for (inherently risky) internet-facing tasks.</li>
+            <li><code>dXX-studio</code> is for local workflows or creative tools that don't need network access.</li>
+            <li><code>dXX-ward</code>   is for highly sensitive tasks like password generation or file inspection - with extreme hardening and no ambient "convenience" features.        
+        </ul>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Create The Ward: Part 1</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            <strong>IMPORTANT: Shut down <code>dXX-studio</code> before proceeding.</strong> It doesn't hurt to shut down <code>dXX-inet</code>, either.
+        </p>
+        <p>
+            Go ahead and clone dXX-studio, and call the result dXX-ward. Black is once again the preferred color.
+        </p>
+        <p>
+            You should now have three clones of dXX, namely:
+        </p>
+        <ul>
+            <li> <code>dXX-inet  </code> (cloned from <code>dXX</code>)         </li>
+            <li> <code>dXX-studio</code> (cloned from <code>dXX</code>)         </li>
+            <li> <code>dXX-ward  </code> (cloned from <code>dXX-studio</code>) </li>
+        </ul>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Create The Ward: Part 2.</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            We'll now harden <code>dXX-ward</code>.
+        </p>
+        <p>
+            The following code opens a terminal with appropriate permissions.
+        </p>
+        <div class="bash-script-box">
+            <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# ==================== # You can use SHIFT+INSERT to paste into
+#     dom0 > xterm     # xterm, or use the middle mouse button.
+# ==================== #
+
+# Open a terminal as the root user
+qvm-run -u root dXX-ward xterm
+</pre>
+        </div>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Create The Ward: Part 3.</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            Inside <code>dXX-ward</code>, run the following code.
+        </p>
+        <p>
+            It uninstalls a lot of supposedly essential software, and places aggressive restrictions on the ability of the Linux kernel to do supposedly "helpful" things that might one day be useful to an attacker.
+        </p>
+        <p>
+            Remember: this step should be performed in the dXX-ward template. If you're unsure of which VM a terminal belongs to, look within the square brackets in the window title.
+        </p>
+        <div class="bash-script-box">
+            <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# ======================== # You can use SHIFT+INSERT to paste into
+#     dXX-ward > xterm     # xterm, or use the middle mouse button.
+# ======================== #
+
+# Remove core networking stack and related tools
+until sudo apt purge -y network-manager* wpasupplicant ifupdown avahi* isc-dhcp-client isc-dhcp-common modemmanager ppp; do sleep 1; done
+
+# Remove more network utilities and rsync
+until sudo apt purge -y dnsutils iproute2 iputils-ping rsync; do sleep 1; done
+
+# Remove netbase (low-level network data, optional)
+until sudo apt purge -y netbase; do sleep 1; done
+
+# Remove printing subsystem and color management
+until sudo apt purge -y cups* printer-driver* system-config-printer sane* colord; do sleep 1; done
+
+# Remove Bluetooth stack and modem tools
+until sudo apt purge -y bluez* modemmanager rfkill; do sleep 1; done
+
+# Remove network sharing and legacy services (SMB/NFS/RPC/FTP/Telnet/SSH)
+until sudo apt purge -y samba* nfs-common rpcbind rpcsvc-proto ftp telnet ssh openssh-server openssh-client; do sleep 1; done
+
+# Remove audio support
+until sudo apt purge -y pulseaudio alsa-utils; do sleep 1; done
+
+# Remove video/audio/media players
+until sudo apt purge -y vlc* mplayer* ffmpeg*; do sleep 1; done
+
+# Clean up
+until sudo apt autoremove -y --purge; do sleep 1; done
+until sudo apt clean; do sleep 1; done
+echo 'Purge complete.'
+
+# Blacklist unwanted kernel modules
+until sudo tee /etc/modprobe.d/ward-blacklist.conf > /dev/null &lt;&lt;'EOF'
+# Networking drivers (Ethernet and WiFi)
+blacklist e1000   # Intel PRO/1000 wired Ethernet driver
+blacklist e1000e  # Intel PRO/1000 PCIe wired Ethernet driver
+blacklist r8169   # Realtek Gigabit Ethernet driver
+
+blacklist iwlwifi     # Intel wireless (WiFi) driver
+blacklist ath9k       # Atheros 802.11n wireless (WiFi) driver
+blacklist ath10k_pci  # Atheros 802.11ac wireless (WiFi) driver
+blacklist brcmsmac    # Broadcom 802.11n wireless (WiFi) driver
+blacklist b43         # Broadcom legacy wireless (WiFi) driver
+
+# Bluetooth drivers
+blacklist btusb      # Generic Bluetooth USB driver
+blacklist bluetooth  # Bluetooth core subsystem
+
+# Audio drivers
+blacklist snd_hda_intel  # Intel HD Audio (most common onboard sound)
+blacklist snd_usb_audio  # USB audio driver for microphones, headsets, etc.
+
+# Printing and scanner drivers
+blacklist usblp        # USB printer support
+blacklist lp           # Parallel port printer support
+blacklist parport      # Parallel port subsystem (used by some legacy printers and hardware)
+blacklist usb_storage  # USB Mass Storage support (external drives, some scanners)
+
+# USB storage (prevents loading external drives)
+blacklist usb_storage  # USB Mass Storage again (redundant for extra paranoia)
+EOF
+do sleep 1; done
+
+# Harden sysctl even further
+echo 'Appending to /etc/sysctl.d/99-hardening.conf'
+until sudo tee -a /etc/sysctl.d/99-hardening.conf > /dev/null &lt;&lt;'EOF'
+####################################
+#### AGGRESSIVE "OVERHARDENING" ####
+####################################
+kernel.modprobe = "/bin/false"        # Do not allow modprobe for unprivileged
+kernel.usermodehelper = "/bin/false"  # No usermode helpers
+EOF
+do sleep 1; done
+
+# Implement the changes
+sysctl --system
+</pre>
+        </div>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>End of Section</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+            </div>
+        </div>
+        <p>
+            Note that if you ever plan to run even slightly complex apps (like PDF viewers or image editors), the ward may not be suitable. Stick to very minimal use cases unless you're prepared to debug things manually. Most offline tasks occur in the studio, not the ward.
+        </p>
+        <p>
+            And by the way, well done! We've now got our three base templates.
+        </p>
+        <p>
+            In the next section, we'll start installing software.
+        </p>
+        <p>
+            <strong>Make sure you shutdown <code>dXX-ward</code> at this point.</strong>
+        </p>
+    </div>
+    <script src="scripts.js"></script>
+</body>
+</html>
+
+

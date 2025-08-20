@@ -1,0 +1,73 @@
+h20-clone() {
+    # Defaults (override with -u and/or -d)
+    local domain="github.com"
+    local username=""
+    local OPTIND opt
+
+    # Parse options: -u <username>  -d <domain>
+    while getopts ":u:d:" opt; do
+        case "$opt" in
+            u) username="$OPTARG" ;;
+            d) domain="$OPTARG" ;;
+            :)
+                echo "Option -$OPTARG requires an argument." >&2
+                return 1
+                ;;
+            \?)
+                echo "Usage: h20-clone [-u <username>] [-d <domain>] <repo-name>" >&2
+                return 1
+                ;;
+        esac
+    done
+    shift $((OPTIND - 1))
+
+    # Positional: repo name is required
+    local repo="$1"
+    if [ -z "$repo" ]; then
+        echo "Usage: h20-clone [-u <username>] [-d <domain>] <repo-name>" >&2
+        return 1
+    fi
+
+    # If username not provided, try to get it from git config
+    if [ -z "$username" ]; then
+        # Prefer a dedicated github.user if present
+        username="$(git config --global github.user 2>/dev/null)"
+        # Fallback: user.name (spaces -> dashes)
+        if [ -z "$username" ]; then
+            username="$(git config --global user.name 2>/dev/null | sed 's/ \+/-/g')"
+        fi
+        if [ -z "$username" ]; then
+            echo "Could not determine a username from git; use -u <username>." >&2
+            return 1
+        fi
+    fi
+
+    # 1) Ensure ~/Git exists
+    mkdir -p "$HOME/Git" || return 1
+
+    # 2) cd into it
+    cd "$HOME/Git" || return 1
+
+    # 3) Clone the repo
+    git clone "git@${domain}:${username}/${repo}.git" || return 1
+
+    # 4) cd into the repo
+    cd "$repo" || return 1
+
+    # 5) Open Geany on all non-hidden files recursively (detached)
+    if command -v geany >/dev/null 2>&1; then
+        # Exclude hidden files/dirs by skipping any path containing '/.'
+        # Use -print0/xargs -0 to handle spaces safely
+        find . -type f -not -path '*/.*' -print0 \
+          | xargs -0 nohup geany >/dev/null 2>&1 &
+    else
+        echo "Note: geany not found on PATH; skipping editor launch." >&2
+    fi
+
+    # 6) Run aider
+    if command -v aider >/dev/null 2>&1; then
+        aider
+    else
+        echo "Note: aider not found on PATH; skipping aider launch." >&2
+    fi
+}

@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setting up FOSS Software</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="page">
+        <div class="page-header">
+            <h2>Choose Debian Version</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>Remind me again, what version of Debian are you targeting?</p>
+        <input type="text" id="XX" placeholder="Enter the version of Debian you're using.">
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Install Passwordless Sudo: Part 1.</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            It's helpful to have passwordless sudo available throughout the studio. This allow you to install software in disposable qubes as needed. This, in turn, means your base templates can remain FOSS and relatively light.
+        </p>
+        <p>
+            You can skip this step if you're super-paranoid, however my opinion is that skipping it will tend to do more harm than good.
+        </p>
+        <p>
+            The following code opens a terminal with appropriate permissions.
+        </p>
+        <div class="bash-script-box">
+            <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# ==================== # You can use SHIFT+INSERT to paste into
+#     dom0 > xterm     # xterm, or use the middle mouse button.
+# ==================== #
+
+# Open a terminal as the root user
+qvm-run -u root dXX-studio-builder xterm
+</pre>
+        </div>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Install Passwordless Sudo: Part 2.</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            Run the following code inside <code>dXX-studio</code> to install passwordless sudo.
+        </p>
+        <p>
+            <strong>Ensure you shut down <code>dXX-studio</code> afterwards.</strong>
+        </p>
+        <div class="bash-script-box">
+            <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# ========================== # You can use SHIFT+INSERT to paste into
+#     dXX-studio > xterm     # xterm, or use the middle mouse button.
+# ========================== #
+
+# Update your package list
+until sudo apt update; do sleep 1; done
+
+echo "Installing passwordless sudo"
+until sudo apt install qubes-core-agent-passwordless-root; do sleep 1; done
+</pre>
+        </div>
+        <p>
+            <strong>Shut down <code>dXX-studio</code> before proceeding.</strong>
+        </p>
+    </div>
+    <div class="page" data-format-specifier="XX">
+        <div class="page-header">
+            <h2>Create The Templates</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            Now based on <code>dXX-studio</code>, which you've shutdown at this point, go ahead and create two TemplateVMs.
+        </p>
+        <ul>
+            <li><code>dXX-studio-builder</code>  (This will help us verify and building software offline)</li>
+            <li><code>dXX-studio-libcheck</code> (This will help us decide where to install software) </li>
+        </ul>
+        <p>
+            We'll create further offline templates later on in the guide, once the libchecker is working.
+        </p>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Offline Builder: Part 1.</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            We'll now set up dXX-studio-builder for verification and software building.
+        </p>
+        <p>
+            The following code opens a terminal with appropriate permissions.
+        </p>
+        <div class="bash-script-box">
+            <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# ==================== # You can use SHIFT+INSERT to paste into
+#     dom0 > xterm     # xterm, or use the middle mouse button.
+# ==================== #
+
+# Open a terminal as the root user
+qvm-run -u root dXX-studio-builder xterm
+</pre>
+        </div>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Offline Builder: Part 2.</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            Run the following code in dXX-studio-builder.
+        </p>
+        <div class="bash-script-box">
+            <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# ================================== # You can use SHIFT+INSERT to paste into
+#     dXX-studio-builder > xterm     # xterm, or use the middle mouse button.
+# ================================== #
+
+echo "Updating package index..."
+until sudo apt update; do sleep 1; done
+
+echo "Installing signature and checksum verification tools..."
+until sudo apt install gnupg dirmngr openssl coreutils file binutils; do sleep 1; done
+
+echo "Installing C/C++ toolchain..."
+until sudo apt install gcc g++ make; do sleep 1; done
+
+echo "Installing Haskell compiler (GHC)..."
+until sudo apt install ghc; do sleep 1; done
+
+echo "Template ready."
+echo "You can now verify signatures (.asc), hashes (.sha256, .sha512), and build from C, C++ and Haskell safely."
+</pre>
+        </div>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Libchecker: Part 1.</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            We'll now set up the libchecker.
+        </p>
+        <p>
+            The following code opens a terminal with appropriate permissions.
+        </p>
+        <div class="bash-script-box">
+            <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# ==================== # You can use SHIFT+INSERT to paste into
+#     dom0 > xterm     # xterm, or use the middle mouse button.
+# ==================== #
+
+# Open a terminal as the root user
+qvm-run -u root dXX-studio-libcheck xterm
+</pre>
+        </div>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Libchecker: Part 2.</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            Run the following code in dXX-studio-builder.
+        </p>
+        <div class="bash-script-box">
+            <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# =================================== # You can use SHIFT+INSERT to paste into
+#     dXX-studio-libcheck > xterm     # xterm, or use the middle mouse button.
+# =================================== #
+
+echo "Updating package index..."
+until sudo apt update; do sleep 1; done
+
+# Append libcheck
+until sudo tee -a /etc/bash.bashrc > /dev/null &lt;&lt;'EOF'
+# h20-libcheck checks all combinations of toolkit and media library blacklists
+# It reports which blacklists can be enabled while still allowing a package to be installed
+# It summarizes the strongest sets of blacklists that allow install (the maximal sets)
+# This script relies on h20-blacklist-gtk, h20-unblacklist-gtk, etc., to be available
+
+h20-libcheck() {
+
+    # Argument parsing
+    local pkg="$1"
+    local blacklist_labels=(GTK QT GStreamer FFmpeg)
+    local shortcodes=(gt qt gm fm)
+
+    # Check if sudo is installed
+    if ! command -v sudo >/dev/null 2>&amp;1; then
+        echo "h20-libcheck: sudo not found. Please install sudo and ensure you can run as root." >&2
+        return 1
+    fi
+
+    # Check if user can use sudo
+    if ! sudo true >/dev/null 2>&amp;1; then
+        echo "h20-libcheck: You do not have sudo/root permissions. Exiting." >&2
+        return 1
+    fi
+
+    # Clean up any existing blacklists at start to ensure a consistent test environment
+    sudo h20-unblacklist-gtk >/dev/null
+    sudo h20-unblacklist-qt >/dev/null
+    sudo h20-unblacklist-gstreamer >/dev/null
+    sudo h20-unblacklist-ffmpeg >/dev/null
+    echo "Note: Please run 'sudo apt-get update' before using this tool to ensure accurate results."
+    echo
+
+    # Main loop over recommends settings
+    for recommends in "with-recommends" "no-recommends"; do
+
+        # Work out arguments to apt-get
+        local install_args=()
+        if [ "$recommends" = "no-recommends" ]; then
+            install_args=(--no-install-recommends)
+        fi
+        echo
+        echo "Testing $pkg with recommends mode: ${recommends//-/ }"
+
+        # Arrays to track results and combinations
+        local combs=()
+        local results=()
+
+        # Test all possible blacklist combinations
+        # There are four independent blacklists, so 2^4 = 16 combinations (from 0 to 15)
+        for n in $(seq 0 15); do
+
+            # Apply or remove each blacklist based on this combination's bits
+            if (( n & 1 )); then sudo h20-blacklist-gtk >/dev/null; else sudo h20-unblacklist-gtk >/dev/null; fi
+            if (( n & 2 )); then sudo h20-blacklist-qt >/dev/null; else sudo h20-unblacklist-qt >/dev/null; fi
+            if (( n & 4 )); then sudo h20-blacklist-gstreamer >/dev/null; else sudo h20-unblacklist-gstreamer >/dev/null; fi
+            if (( n & 8 )); then sudo h20-blacklist-ffmpeg >/dev/null; else sudo h20-unblacklist-ffmpeg >/dev/null; fi
+
+            # Prepare a label for this combination indicating which libraries are blacklisted
+            block_label=""
+            for i in 0 1 2 3; do
+                if (( n & (1 &lt;&lt; i) )); then
+                    block_label="$block_label${blacklist_labels[$i]} "
+                fi
+            done
+            if [ -z "$block_label" ]; then
+                block_label="None blocked"
+            else
+                block_label="$(echo "$block_label" | sed 's/ $//')"
+            fi
+
+            # Simulate the install for this blacklist combination
+            if sudo apt-get install -s "${install_args[@]}" "$pkg" >/dev/null 2>&amp;1; then
+                results[$n]="WORKS"
+            else
+                results[$n]="BLOCKED"
+            fi
+            combs[$n]=$n
+
+            # Print the result for this combination
+            echo "Block: $block_label : ${results[$n]}"
+        done
+
+        # Unblacklist all at the end to avoid leaving the system in a blocked state
+        sudo h20-unblacklist-gtk >/dev/null
+        sudo h20-unblacklist-qt >/dev/null
+        sudo h20-unblacklist-gstreamer >/dev/null
+        sudo h20-unblacklist-ffmpeg >/dev/null
+
+        # Identify the maximal WORKS combinations
+        # A maximal is a combination for which no superset of blacklists still works
+        maximals=()
+        for i in $(seq 0 15); do
+            [ "${results[$i]}" = "WORKS" ] || continue
+            maximal=1
+            for j in $(seq 0 15); do
+                [ "$i" -eq "$j" ] && continue
+                [ "${results[$j]}" = "WORKS" ] || continue
+                if (( (j | i) == j && j != i )); then
+                    maximal=0
+                    break
+                fi
+            done
+            [ $maximal -eq 1 ] && maximals+=("$i")
+        done
+
+        # Report the maximal combinations in detail
+        echo
+        echo "Maximal combinations that still allow installation in $recommends mode:"
+        for idx in "${maximals[@]}"; do
+            n="$idx"
+            blocks=""
+            allows=""
+            allowstring=""
+            for i in 0 1 2 3; do
+                if (( n & (1 &lt;&lt; i) )); then
+                    blocks="$blocks${blacklist_labels[$i]} "
+                else
+                    allows="$allows${blacklist_labels[$i]} "
+                    allowstring="$allowstring${shortcodes[$i]}"
+                fi
+            done
+            [ -z "$blocks" ] && blocks="None"
+            [ -z "$allows" ] && allows="None"
+            blocks="$(echo "$blocks" | sed 's/ $//')"
+            allows="$(echo "$allows" | sed 's/ $//')"
+            echo "Block: $blocks, Allow: $allows, Allowstring: $allowstring"
+        done
+
+        # Blank line at end
+        echo
+    done
+}
+EOF
+do sleep 1; done
+</pre>
+        </div>
+    </div>
+    <script src="scripts.js"></script>
+</body>
+</html>
