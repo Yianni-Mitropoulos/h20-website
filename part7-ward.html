@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setting Up The Ward</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="page" data-format-specifier="XX">
+        <div class="page-header">
+            <h2>Choose Debian Version</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>What version of Debian are you targeting?</p>
+        <input type="text" id="XX" placeholder="Enter the version of Debian you're using.">
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Create Clones</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            Before starting, ensure the <code>dXX-ward</code> qube is not running (it's not enough to exit the <code>dXX-ward</code> terminal).
+        </p>
+        <p>
+            Now create the following TemplateVM by cloning <code>dXX-ward</code>.
+        </p>
+        <ul>
+            <li><code>dXX-ward-files</code> (For storing your files)</li>
+        </ul>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Setting Up The Files Qube: Part 1.</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            First, open a terminal in <code>dXX-ward-files</code>.
+        </p>
+        <p>
+            Then navigate to the Github page for Yianni-Mitropoulos/h20-pass.
+        </p>
+        <p>
+            Click the file <code>install-debian.sh</code>, and copy the code into <code>dXX-ward-files</code>
+        </p>
+    </div>
+    <div class="page">
+        <div class="page-header">
+            <h2>Setting Up The Files Qube: Part 1.</h2>
+            <div class="button-container">
+                <button class="prev-next-btn" onclick="prev()">Back</button>
+                <button class="prev-next-btn" onclick="next()">Next</button>
+            </div>
+        </div>
+        <p>
+            Now uninstall passwordless sudo, with the following code:
+        </p>
+        <div class="bash-script-box">
+            <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+<pre>
+# ==================== # You can use SHIFT+INSERT to paste into
+#     dom0 > xterm     # xterm, or use the middle mouse button.
+# ==================== #
+
+# Open a terminal as the root user
+qvm-run -u root dXX-studio-builder xterm
+</pre>
+        </div>
+    </div>
+    <script src="scripts.js"></script>
+</body>
+</html>

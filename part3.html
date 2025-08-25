@@ -261,12 +261,11 @@ until sudo apt clean; do sleep 1; done
 			<li>System logs are configured to be as comprehensive as possible.</li>
 			<li>They live entirely in RAM.</li>
 			<li>They last only 1 minute in the originating VM.</li>
-        	<li>Some VMs are configured to automatically send their logs to a dedicated <code>logaudit</code> qube.</li>
-        	<li>The <code>logaudit</code> qube runs automated log analysis and intrusion detection software.</li>
-        	<li>The <code>logaudit</code> qube does not hold onto your logs for more than 30 minutes, unless anomalous behaviour is detected.</li>
+        	<li>Most VMs are configured to automatically send their logs to a dedicated <code>logaudit</code> qube.</li>
+        	<li>The <code>logaudit</code> qube runs automated log analysis and intrusion detection software, but does not hold onto your logs for more than 30 minutes, unless anomalous behaviour is detected.</li>
         	<li>If anomalous behaviour is detected, the <code>logaudit</code> qube chooses a random password, and begins to encrypt the logs with that password, and stores them on disk for future reference.</li>
-        	<li>The anomalous behaviour alert tells you the password, so that you can write it down.</li>
-        	<li>If you don't store that password somehow (or memorize it), you won't be able to recover those logs.</li>
+        	<li>The anomalous behaviour alert tells you the password, so that you can record it for future use.</li>
+        	<li>If you don't record that password, you can't recover those logs (and neither can anyone else).</li>
         </ul>
     </div>
     <div class="page">
